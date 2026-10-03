@@ -1,6 +1,8 @@
 <?php
 
+use App\Exceptions\ProcedureFailed;
 use App\Http\Middleware\EnsurePasswordChanged;
+use App\Http\Middleware\EnsureStaffHasBranch;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Responses\ApiResponse;
@@ -28,12 +30,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => EnsureUserHasRole::class,
             'active' => EnsureUserIsActive::class,
             'password.changed' => EnsurePasswordChanged::class,
+            'staff.branch' => EnsureStaffHasBranch::class,
         ]);
 
-        // Check status, password and role before route-model binding, so a
-        // non-admin gets 403 on /admin/branches/999 rather than a 404 that
-        // reveals whether the record exists.
-        foreach ([EnsureUserIsActive::class, EnsurePasswordChanged::class, EnsureUserHasRole::class] as $middlewareClass) {
+        // Check status, password, role and branch before route-model binding, so
+        // a user without access gets 403 on /admin/branches/999 rather than a 404
+        // that reveals whether the record exists.
+        foreach ([EnsureUserIsActive::class, EnsurePasswordChanged::class, EnsureUserHasRole::class, EnsureStaffHasBranch::class] as $middlewareClass) {
             $middleware->prependToPriorityList(SubstituteBindings::class, $middlewareClass);
         }
     })
@@ -47,6 +50,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (AuthenticationException $e, Request $request) {
             if ($request->is('api/*')) {
                 return ApiResponse::error('Unauthenticated.', 401);
+            }
+        });
+
+        // A stored procedure refused the operation: its message is meant for the user.
+        $exceptions->render(function (ProcedureFailed $e, Request $request) {
+            if ($request->is('api/*')) {
+                return ApiResponse::error($e->getMessage(), 422);
             }
         });
 

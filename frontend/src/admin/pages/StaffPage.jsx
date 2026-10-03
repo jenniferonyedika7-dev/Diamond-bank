@@ -8,11 +8,27 @@ import EmptyState from '../../components/EmptyState.jsx'
 import FormField from '../../components/FormField.jsx'
 import Modal from '../../components/Modal.jsx'
 import PageHeader from '../../components/PageHeader.jsx'
+import ReasonDialog from '../../components/ReasonDialog.jsx'
 import Pagination from '../../components/Pagination.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import { api, getErrorMessage, getFieldErrors } from '../../lib/api.js'
 import { formatDate } from '../../lib/format.js'
-import { useApiList, useDebounced } from '../useApiList.js'
+import { useApiList, useDebounced } from '../../lib/useApiList.js'
+
+const REASON_COPY = {
+  reject: {
+    title: 'Reject registration',
+    intro: "They won't be able to sign in. This can't be undone; they would need to register again.",
+    submitLabel: 'Reject registration',
+    busyLabel: 'Rejecting…',
+  },
+  block: {
+    title: 'Block staff member',
+    intro: 'They are signed out straight away and cannot sign in until unblocked.',
+    submitLabel: 'Block',
+    busyLabel: 'Blocking…',
+  },
+}
 
 const TABS = [
   { id: 'pending', label: 'Pending', status: 'PENDING', empty: 'No registrations are waiting for approval.' },
@@ -110,7 +126,15 @@ export default function StaffPage() {
 
       {action?.type === 'approve' && <ApproveDialog user={action.user} onClose={() => setAction(null)} onDone={done} />}
       {(action?.type === 'reject' || action?.type === 'block') && (
-        <ReasonDialog type={action.type} user={action.user} onClose={() => setAction(null)} onDone={done} />
+        <ReasonDialog
+          {...REASON_COPY[action.type]}
+          title={`${REASON_COPY[action.type].title}: ${action.user.full_name}`}
+          onClose={() => setAction(null)}
+          onSubmit={async (reason) => {
+            const { data } = await api.post(`/api/v1/admin/staff/${action.user.user_id}/${action.type}`, { reason })
+            done(data.message)
+          }}
+        />
       )}
       {action?.type === 'unblock' && (
         <ConfirmDialog
@@ -289,72 +313,6 @@ function ApproveDialog({ user, onClose, onDone }) {
           </div>
         </form>
       )}
-    </Modal>
-  )
-}
-
-const REASON_COPY = {
-  reject: {
-    title: 'Reject registration',
-    intro: "They won't be able to sign in. This can't be undone; they would need to register again.",
-    submit: 'Reject registration',
-    busy: 'Rejecting…',
-  },
-  block: {
-    title: 'Block staff member',
-    intro: 'They are signed out straight away and cannot sign in until unblocked.',
-    submit: 'Block',
-    busy: 'Blocking…',
-  },
-}
-
-function ReasonDialog({ type, user, onClose, onDone }) {
-  const copy = REASON_COPY[type]
-  const [reason, setReason] = useState('')
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
-  const [fieldErrors, setFieldErrors] = useState({})
-
-  async function handleSubmit(event) {
-    event.preventDefault()
-    setSubmitting(true)
-    setError('')
-    setFieldErrors({})
-    try {
-      const { data } = await api.post(`/api/v1/admin/staff/${user.user_id}/${type}`, { reason })
-      onDone(data.message)
-    } catch (err) {
-      setError(getErrorMessage(err))
-      setFieldErrors(getFieldErrors(err))
-      setSubmitting(false)
-    }
-  }
-
-  return (
-    <Modal title={`${copy.title}: ${user.full_name}`} onClose={onClose}>
-      <form onSubmit={handleSubmit} noValidate className="space-y-4">
-        <p className="text-sm text-slate-600">{copy.intro}</p>
-        <Alert>{error}</Alert>
-        <FormField
-          id="reason"
-          as="textarea"
-          label="Reason"
-          required
-          maxLength={255}
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          hint={`${reason.length}/255 characters. Recorded in the audit log.`}
-          error={fieldErrors.reason}
-        />
-        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="danger" loading={submitting} loadingText={copy.busy} disabled={reason.trim() === ''}>
-            {copy.submit}
-          </Button>
-        </div>
-      </form>
     </Modal>
   )
 }

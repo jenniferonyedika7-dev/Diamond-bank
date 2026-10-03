@@ -16,10 +16,14 @@ class ApiResponse
         return response()->json(['success' => true, 'message' => $message, 'data' => $data], $status);
     }
 
-    /** data: { items, pagination: { current_page, last_page, per_page, total } } */
-    public static function paginated(string $message, LengthAwarePaginator $paginator): JsonResponse
+    /**
+     * data: { items, pagination: { current_page, last_page, per_page, total }, ...$extra }
+     *
+     * @param  array<string, mixed>  $extra
+     */
+    public static function paginated(string $message, LengthAwarePaginator $paginator, array $extra = []): JsonResponse
     {
-        return self::success($message, [
+        return self::success($message, $extra + [
             'items' => $paginator->items(),
             'pagination' => [
                 'current_page' => $paginator->currentPage(),

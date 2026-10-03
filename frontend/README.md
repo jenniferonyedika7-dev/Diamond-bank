@@ -39,8 +39,12 @@ src/
   auth/               AuthProvider (user, login, logout, refresh), useAuth, ProtectedRoute, PublicOnlyRoute
   components/         AppLayout (header), AuthLayout, FormField, Button, Alert, Modal, ConfirmDialog, Pagination, …
   pages/              Login, RegisterCustomer, RegisterStaff, ChangePassword, Dashboard (staff/customer placeholder)
-  admin/              AdminLayout (sidebar), ResourcePage (table + form + delete for one resource), useApiList
+  lib/useApiList.js   list loading (plain or paginated) + useDebounced
+  admin/              AdminLayout (sidebar), ResourcePage (table + form + delete for one resource)
   admin/pages/        Overview, BankSettings, Branches, AccountTypes, CardTypes, Departments, Staff
+  staff/              StaffShell (loads the branch for the header), StaffLayout (sidebar), TransactionList, badges
+  staff/pages/        Dashboard, Customers, CustomerDetail, AccountDetail
+  shared/             AuditLogPage (/staff/audit-log and /admin/audit-log)
 ```
 
 How the API client behaves:
@@ -56,6 +60,8 @@ How the API client behaves:
 - `/auth/me` is behind the password-changed check. So after a reload, a user who still must change their password gets a 403 with no name or role, and the header shows only the Logout button until they change it.
 - `full_name` is only returned for employees (admin, staff). Customers are shown by `user_name`.
 - 429 login lockout: the login page counts down from the `Retry-After` header (exposed via CORS), falling back to N in "Try again in N seconds.".
+- Staff endpoints need a current branch (`employee_branch_lnk.end_date IS NULL`); without one they return 403 "You are not assigned to a branch. Contact the administrator." The audit log is the exception for admins.
+- Money moves only through the stored procedures. When one refuses (SQLSTATE 45000) the API returns 422 in the `{ success, message, data }` envelope with the procedure's message, which the UI shows as-is.
 - Admin lists: `/admin/branches` and `/admin/staff` return `data: { items, pagination }`; the other lists return a plain array. Deleting something that is in use returns 409 with a message naming what uses it.
 
 ## Manual test checklist: auth (Phase B)
@@ -125,3 +131,53 @@ Starts from the current state of `bank_db`: only the admin (password already cha
 - [ ] The browser tab shows the navy/gold diamond favicon.
 - [ ] Sign out, then enter a wrong password 6 times for the same user → the countdown runs (now from the Retry-After header).
 - [ ] In MySQL Workbench: `SELECT action_type, record_id, details FROM audit_log ORDER BY audit_log_id DESC;` shows BANK_CREATED, BANK_UPDATED, BRANCH_CREATED/UPDATED, DEPARTMENT_*, ACCOUNT_TYPE_*, CARD_TYPE_*, STAFF_APPROVED, STAFF_BLOCKED (with reason), STAFF_UNBLOCKED, STAFF_REJECTED (with reason), each with before/after values.
+
+## Manual test checklist: staff area (Phase D)
+
+**First, in `backend/`:** `php artisan migrate`. It adds only the `sp_deposit` and `sp_withdraw` procedures (no table changes). `php artisan migrate:status` should then show `2026_10_04_000001_create_deposit_withdraw_procedures` as Ran.
+
+Starts from the current `bank_db`: Diamond Bank, Brikama Branch (BRK001), account types Savings and Current, card types, the Operations department, the admin, and ACTIVE `teststaff` at Brikama Branch. No customers yet. Note the Savings minimum balance (shown in Admin → Account types); the steps below assume GMD 100.00, so adjust the amounts if yours differs.
+
+**Setup**
+- [ ] In a private window, register a customer at **/register** (Brikama Branch). Leave that window open, signed in as the customer.
+
+**Dashboard and header**
+- [ ] Sign in as **teststaff** → lands on **/staff**. Under the brand the header shows **Brikama Branch · BRK001** (plus the department, if one was assigned). The sidebar shows Dashboard, Customers and Audit log.
+- [ ] The dashboard shows **"1 customer awaiting KYC"** and Awaiting KYC 1.
+- [ ] Quick search: type the customer's surname → the Customers page (All tab) with that customer. Type `DB0019999999` → the account page says "The requested record was not found."
+
+**Customer profile and KYC**
+- [ ] **Customers → Pending KYC** → open the customer. **Open account** is disabled, with "Accounts can be opened once the customer's KYC is verified."
+- [ ] **Edit**: change the phone → "Customer details updated." Set the date of birth to 10 years ago → error under Date of birth.
+- [ ] **Verify** → confirm → "Customer verified."; the KYC card shows "Verified by … on …". Edit again → the National ID field is locked, with a note explaining why.
+
+**Open an account**
+- [ ] **Open account**: the type list shows "Savings: minimum GMD 100.00". Pick Savings, enter `50` → "The initial deposit is below the minimum balance for this account type."
+- [ ] Enter `1000` → you land on the new account page (number like `DB…`) with "Account DB… opened." and a balance of **GMD 1,000.00**. The history shows the initial deposit, at Brikama Branch.
+
+**Deposit, withdraw**
+- [ ] **Deposit** 500 with a description → the dialog shows **New balance GMD 1,500.00**; Done → the balance and history update (green +GMD 500.00).
+- [ ] **Withdraw** 1450 → "Insufficient funds: this withdrawal would take the account below its minimum balance." The balance is unchanged after closing.
+- [ ] **Withdraw** 100 → New balance GMD 1,400.00 (red −GMD 100.00 in the history).
+- [ ] **Deposit** `12.345` → "Amounts can have at most 2 decimal places."
+
+**Freeze**
+- [ ] **Freeze**: the button stays disabled until a reason is typed → "Account frozen."; the status badge shows Frozen, and Deposit/Withdraw are disabled.
+- [ ] **Unfreeze** → "Account unfrozen."; deposits work again.
+
+**Customer login block**
+- [ ] Back on the customer page, **Online login → Block login** with a reason → "Customer login blocked."
+- [ ] In the customer's private window, reload → back on /login. Signing in shows "Your account is blocked. Please contact the bank."
+- [ ] **Unblock login** → the customer can sign in again.
+
+**Audit log**
+- [ ] **Staff → Audit log**: newest first, showing CUSTOMER_UPDATED, CUSTOMER_VERIFIED, ACCOUNT_OPENED, DEPOSIT, WITHDRAWAL, ACCOUNT_FROZEN/UNFROZEN and CUSTOMER_BLOCKED/UNBLOCKED, each by teststaff (staff).
+- [ ] Filter Action = CUSTOMER_VERIFIED → one row. **Details** expands the JSON (`verified_by`, `verified_at`). Set From to tomorrow → "No entries match these filters." Clear filters.
+- [ ] Sign in as the admin → the sidebar now has **Audit log**, showing the same entries (plus the admin's own).
+- [ ] As admin, open http://localhost:5173/staff → redirected to /admin. As teststaff, open /admin → redirected to /staff.
+
+**Database check (MySQL Workbench)**
+- [ ] `SELECT t.transaction_id, tt.type_name, t.amount, t.balance_after, t.branch_id, t.employee_id, t.channel FROM transactions t JOIN transaction_type tt USING (transaction_type_id) ORDER BY t.transaction_id;` → every row has Brikama's branch_id, teststaff's employee_id and channel BRANCH, and the balance_after values chain correctly.
+
+**Mobile (~375px)**
+- [ ] The sidebar becomes a Menu button; the transaction history becomes cards; dialogs fit the screen and close with Escape.

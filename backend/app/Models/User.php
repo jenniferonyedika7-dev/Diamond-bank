@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Support\Facades\DB;
 
 #[Fillable(['role_id', 'customer_id', 'employee_id', 'user_name', 'password', 'must_change_password', 'channel', 'status', 'last_login'])]
 #[Hidden(['password', 'remember_token'])]
@@ -55,5 +56,15 @@ class User extends Authenticatable
     public function hasRole(string ...$roles): bool
     {
         return in_array($this->role?->role_name, $roles, true);
+    }
+
+    /**
+     * Deletes this user's rows from the database session store, logging them
+     * out everywhere at once. EnsureUserIsActive also catches a blocked user's
+     * next request; this makes it immediate.
+     */
+    public function endSessions(): void
+    {
+        DB::table(config('session.table', 'sessions'))->where('user_id', $this->user_id)->delete();
     }
 }

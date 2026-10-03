@@ -9,7 +9,7 @@ import PageHeader from '../components/PageHeader.jsx'
 import Pagination from '../components/Pagination.jsx'
 import Spinner from '../components/Spinner.jsx'
 import { api, getErrorMessage, getFieldErrors } from '../lib/api.js'
-import { useApiList, useDebounced } from './useApiList.js'
+import { useApiList, useDebounced } from '../lib/useApiList.js'
 
 /**
  * Table + create/edit modal + delete confirmation for one admin resource.

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Requests\Admin\ApproveStaffRequest;
-use App\Http\Requests\Admin\StaffReasonRequest;
+use App\Http\Requests\ReasonRequest;
 use App\Http\Responses\ApiResponse;
 use App\Models\User;
 use Illuminate\Http\Exceptions\HttpResponseException;
@@ -113,14 +113,14 @@ class StaffController extends AdminController
     }
 
     /** ACTIVE -> BLOCKED, ending their sessions immediately. */
-    public function block(StaffReasonRequest $request, User $staffUser): JsonResponse
+    public function block(ReasonRequest $request, User $staffUser): JsonResponse
     {
         return $this->blockWithReason($staffUser, $request->validated('reason'), 'ACTIVE', 'STAFF_BLOCKED',
             'Only active staff can be blocked.', "{$staffUser->user_name} has been blocked.");
     }
 
     /** PENDING -> BLOCKED: a refused registration (the staff sign-up page is public). */
-    public function reject(StaffReasonRequest $request, User $staffUser): JsonResponse
+    public function reject(ReasonRequest $request, User $staffUser): JsonResponse
     {
         return $this->blockWithReason($staffUser, $request->validated('reason'), 'PENDING', 'STAFF_REJECTED',
             'Only pending staff can be rejected.', "{$staffUser->user_name}'s registration has been rejected.");
@@ -161,8 +161,7 @@ class StaffController extends AdminController
             }
 
             $this->setStatus($staffUser, 'BLOCKED');
-            // Logs them out everywhere now; EnsureUserIsActive would also catch their next request.
-            DB::table(config('session.table', 'sessions'))->where('user_id', $staffUser->user_id)->delete();
+            $staffUser->endSessions();
 
             $this->audit->log($action, 'users', $staffUser->user_id, [
                 'user_name' => $staffUser->user_name,

@@ -94,6 +94,27 @@ trait BankFixtures
         return $this->createUser('staff', $this->createEmployee(), $status);
     }
 
+    /** Gives the user's employee a current branch (employee_branch_lnk with end_date NULL). */
+    protected function assignToBranch(int $userId, ?int $branchId = null): void
+    {
+        DB::table('employee_branch_lnk')->insert([
+            'employee_id' => DB::table('users')->where('user_id', $userId)->value('employee_id'),
+            'branch_id' => $branchId ?? $this->branchId,
+            'start_date' => now()->toDateString(),
+            'end_date' => null,
+        ]);
+    }
+
+    protected function deposit(string $accountNumber, mixed $amount, int $performedBy, ?string $description = 'Cash deposit'): object
+    {
+        return DB::select('CALL sp_deposit(?, ?, ?, ?)', [$accountNumber, $amount, $description, $performedBy])[0];
+    }
+
+    protected function withdraw(string $accountNumber, mixed $amount, int $performedBy, ?string $description = 'Cash withdrawal'): object
+    {
+        return DB::select('CALL sp_withdraw(?, ?, ?, ?)', [$accountNumber, $amount, $description, $performedBy])[0];
+    }
+
     /** Inserts an account directly (bypassing sp_open_account) for transfer tests. */
     protected function createAccount(int $customerId, float $balance, array $overrides = []): object
     {

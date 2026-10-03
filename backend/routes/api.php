@@ -11,6 +11,11 @@ use App\Http\Controllers\Api\V1\Admin\TransactionTypeController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\BranchController;
+use App\Http\Controllers\Api\V1\Staff\AccountController;
+use App\Http\Controllers\Api\V1\Staff\AuditLogController;
+use App\Http\Controllers\Api\V1\Staff\CustomerController;
+use App\Http\Controllers\Api\V1\Staff\MeController;
+use App\Http\Controllers\Api\V1\Staff\OverviewController as StaffOverviewController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function () {
@@ -47,6 +52,34 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::post('staff/{staffUser}/reject', [StaffController::class, 'reject'])->name('staff.reject');
                 Route::post('staff/{staffUser}/block', [StaffController::class, 'block'])->name('staff.block');
                 Route::post('staff/{staffUser}/unblock', [StaffController::class, 'unblock'])->name('staff.unblock');
+            });
+
+            Route::prefix('staff')->name('staff.')->middleware('role:staff,admin')->group(function () {
+                // Read-only; an admin without a branch may use it too (the admin area links here).
+                Route::get('audit-log', [AuditLogController::class, 'index'])->middleware('staff.branch:admin-optional')->name('audit-log');
+
+                // Everything else happens at the staff member's current branch.
+                Route::middleware('staff.branch')->group(function () {
+                    Route::get('me/branch', [MeController::class, 'branch'])->name('me.branch');
+                    Route::get('overview', StaffOverviewController::class)->name('overview');
+
+                    Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
+                    Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+                    Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
+                    Route::post('customers/{customer}/verify', [CustomerController::class, 'verify'])->name('customers.verify');
+                    Route::post('customers/{customer}/reject-kyc', [CustomerController::class, 'rejectKyc'])->name('customers.reject-kyc');
+                    Route::post('customers/{customer}/block', [CustomerController::class, 'block'])->name('customers.block');
+                    Route::post('customers/{customer}/unblock', [CustomerController::class, 'unblock'])->name('customers.unblock');
+
+                    Route::get('account-types', [AccountController::class, 'types'])->name('account-types.index');
+                    Route::post('accounts', [AccountController::class, 'store'])->name('accounts.store');
+                    Route::get('accounts/{account}', [AccountController::class, 'show'])->name('accounts.show');
+                    Route::get('accounts/{account}/transactions', [AccountController::class, 'transactions'])->name('accounts.transactions');
+                    Route::post('accounts/{account}/deposit', [AccountController::class, 'deposit'])->name('accounts.deposit');
+                    Route::post('accounts/{account}/withdraw', [AccountController::class, 'withdraw'])->name('accounts.withdraw');
+                    Route::post('accounts/{account}/freeze', [AccountController::class, 'freeze'])->name('accounts.freeze');
+                    Route::post('accounts/{account}/unfreeze', [AccountController::class, 'unfreeze'])->name('accounts.unfreeze');
+                });
             });
         });
     });

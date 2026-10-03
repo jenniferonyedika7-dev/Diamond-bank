@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Http\Controllers\Concerns\SnapshotsModels;
 use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Services\AuditLogger;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -17,14 +17,9 @@ use Illuminate\Support\Facades\DB;
  */
 abstract class AdminController extends Controller
 {
-    public function __construct(protected AuditLogger $audit) {}
+    use SnapshotsModels;
 
-    /** The model's key and fillable columns, serialized with their casts, for audit details. */
-    protected function snapshot(Model $model): array
-    {
-        return [$model->getKeyName() => $model->getKey()]
-            + Arr::only($model->attributesToArray(), $model->getFillable());
-    }
+    public function __construct(protected AuditLogger $audit) {}
 
     /**
      * Deletes $model unless rows reference it, writing a {$action} audit row.

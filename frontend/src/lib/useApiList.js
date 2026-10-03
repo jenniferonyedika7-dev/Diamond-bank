@@ -3,10 +3,11 @@ import { api, getErrorMessage } from '../lib/api.js'
 
 /**
  * Loads a list endpoint. Handles both plain lists (data: [...]) and
- * ApiResponse::paginated (data: { items, pagination }). Call reload() after a change.
+ * ApiResponse::paginated (data: { items, pagination, ...extra }). Any extra keys
+ * (e.g. the audit log's filters) are returned as `extra`. Call reload() after a change.
  */
 export function useApiList(endpoint, params) {
-  const [state, setState] = useState({ items: [], pagination: null, loading: true, error: '' })
+  const [state, setState] = useState({ items: [], pagination: null, extra: {}, loading: true, error: '' })
   const [version, setVersion] = useState(0)
   const query = JSON.stringify(params ?? {})
 
@@ -17,12 +18,8 @@ export function useApiList(endpoint, params) {
       .then(({ data }) => {
         if (ignore) return
         const paginated = data.data && !Array.isArray(data.data)
-        setState({
-          items: paginated ? data.data.items : data.data,
-          pagination: paginated ? data.data.pagination : null,
-          loading: false,
-          error: '',
-        })
+        const { items, pagination, ...extra } = paginated ? data.data : { items: data.data, pagination: null }
+        setState({ items, pagination, extra, loading: false, error: '' })
       })
       .catch((err) => !ignore && setState((prev) => ({ ...prev, loading: false, error: getErrorMessage(err) })))
     return () => {

@@ -5,8 +5,11 @@ import { displayName, ROLE_LABEL } from '../lib/roles.js'
 import Brand from './Brand.jsx'
 import Button from './Button.jsx'
 
-/** Shell for every logged-in page: brand, who is signed in, and Logout. */
-export default function AppLayout() {
+/**
+ * Shell for every logged-in page: brand, who is signed in, and Logout.
+ * headerExtra: optional element shown under the brand (the staff area shows the branch).
+ */
+export default function AppLayout({ headerExtra }) {
   const { user, logout } = useAuth()
   const [signingOut, setSigningOut] = useState(false)
   const name = displayName(user)
@@ -21,7 +24,10 @@ export default function AppLayout() {
     <div className="flex min-h-dvh flex-col">
       <header className="bg-navy-900 text-white">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-          <Brand className="text-lg" />
+          <div className="min-w-0">
+            <Brand className="text-lg" />
+            {headerExtra && <div className="mt-0.5 text-xs text-navy-100">{headerExtra}</div>}
+          </div>
           <div className="flex items-center gap-3">
             {(name || role) && (
               <div className="text-right text-sm leading-tight">
