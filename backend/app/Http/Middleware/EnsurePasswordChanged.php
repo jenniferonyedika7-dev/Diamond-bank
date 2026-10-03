@@ -2,37 +2,25 @@
 
 namespace App\Http\Middleware;
 
+use App\Http\Responses\ApiResponse;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Forces users flagged with must_change_password to change their password
- * before they can use any other page.
- *
- * TODO (auth phase): create these named routes:
- *   - password.change         GET  change-password page
- *   - password.change.update  PUT  form submit (call App\Actions\Auth\ChangePassword)
- *   - logout                  POST
- * Until password.change exists, flagged users get a 403 instead of a redirect.
+ * before they can use any other endpoint. Registered as 'password.changed'
+ * in bootstrap/app.php; routes/api.php applies it to every authenticated
+ * route except auth/change-password and auth/logout.
  */
 class EnsurePasswordChanged
 {
-    private const ALLOWED_ROUTES = ['password.change', 'password.change.update', 'logout'];
-
     public function handle(Request $request, Closure $next): Response
     {
-        $user = $request->user();
-
-        if ($user === null || ! $user->must_change_password || $request->routeIs(...self::ALLOWED_ROUTES)) {
-            return $next($request);
+        if ($request->user()?->must_change_password) {
+            return ApiResponse::error('You must change your password before continuing.', 403, ['must_change_password' => true]);
         }
 
-        if ($request->expectsJson() || ! Route::has('password.change')) {
-            abort(403, 'You must change your password before continuing.');
-        }
-
-        return redirect()->route('password.change');
+        return $next($request);
     }
 }
