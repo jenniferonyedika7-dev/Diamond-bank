@@ -3,6 +3,7 @@ import Spinner from './Spinner.jsx'
 const VARIANTS = {
   primary:
     'bg-navy-900 text-white hover:bg-navy-800 focus-visible:outline-accent-500 disabled:bg-navy-900/60',
+  danger: 'bg-red-700 text-white hover:bg-red-800 focus-visible:outline-red-700 disabled:bg-red-700/60',
   secondary:
     'bg-white text-navy-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus-visible:outline-navy-600 disabled:text-slate-400',
 }

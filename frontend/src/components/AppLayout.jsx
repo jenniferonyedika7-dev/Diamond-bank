@@ -20,7 +20,7 @@ export default function AppLayout() {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="bg-navy-900 text-white">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <Brand className="text-lg" />
           <div className="flex items-center gap-3">
             {(name || role) && (
@@ -41,7 +41,7 @@ export default function AppLayout() {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
         <Outlet />
       </main>
     </div>

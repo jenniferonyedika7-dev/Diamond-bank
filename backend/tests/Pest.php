@@ -5,7 +5,7 @@ use Tests\TestCase;
 
 /*
 | Existing PHPUnit test classes keep running unchanged. Pest tests under
-| Feature/Auth use bank_db_testing (see phpunit.xml), truncated and re-seeded
+| Feature/Auth and Feature/Admin use bank_db_testing (see phpunit.xml), truncated and re-seeded
 | (roles, transaction types, admin) before every test. They send the SPA's
 | Referer so Sanctum treats them as stateful (session cookie) requests.
 */
@@ -19,4 +19,4 @@ pest()->extend(TestCase::class)
             'Accept' => 'application/json',
         ]);
     })
-    ->in('Feature/Auth');
+    ->in('Feature/Auth', 'Feature/Admin');

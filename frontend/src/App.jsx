@@ -1,4 +1,12 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
+import AdminLayout from './admin/AdminLayout.jsx'
+import AccountTypesPage from './admin/pages/AccountTypesPage.jsx'
+import BankSettingsPage from './admin/pages/BankSettingsPage.jsx'
+import BranchesPage from './admin/pages/BranchesPage.jsx'
+import CardTypesPage from './admin/pages/CardTypesPage.jsx'
+import DepartmentsPage from './admin/pages/DepartmentsPage.jsx'
+import OverviewPage from './admin/pages/OverviewPage.jsx'
+import StaffPage from './admin/pages/StaffPage.jsx'
 import { AuthProvider } from './auth/AuthContext.jsx'
 import { useAuth } from './auth/useAuth.js'
 import ProtectedRoute from './auth/ProtectedRoute.jsx'
@@ -37,7 +45,15 @@ export default function App() {
           </Route>
           <Route element={<ProtectedRoute roles={['admin']} />}>
             <Route element={<AppLayout />}>
-              <Route path="/admin" element={<DashboardPage />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<OverviewPage />} />
+                <Route path="bank" element={<BankSettingsPage />} />
+                <Route path="branches" element={<BranchesPage />} />
+                <Route path="account-types" element={<AccountTypesPage />} />
+                <Route path="card-types" element={<CardTypesPage />} />
+                <Route path="departments" element={<DepartmentsPage />} />
+                <Route path="staff" element={<StaffPage />} />
+              </Route>
             </Route>
           </Route>
           <Route element={<ProtectedRoute roles={['staff']} />}>

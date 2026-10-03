@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\StoredProcedures;
 
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\BankFixtures;
@@ -83,7 +84,7 @@ class OpenAccountProcedureTest extends TestCase
         try {
             $this->openAccount($this->createCustomer(), $this->currentTypeId, 10, 'USDX', $this->staffUser());
             $this->fail('Expected a data-too-long error.');
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             $this->assertSame('22001', (string) $e->getCode());
         }
 

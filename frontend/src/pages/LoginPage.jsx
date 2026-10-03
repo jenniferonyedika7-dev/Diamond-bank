@@ -20,8 +20,7 @@ export default function LoginPage() {
   const [fieldErrors, setFieldErrors] = useState({})
   const [retryIn, setRetryIn] = useState(0)
 
-  // 429: the backend puts the wait only in the message ("Try again in N seconds.");
-  // its Retry-After header isn't exposed via CORS. Count down and keep the button disabled.
+  // 429: count down and keep the button disabled until the lockout ends.
   useEffect(() => {
     if (retryIn <= 0) return undefined
     const timer = setTimeout(() => setRetryIn((s) => s - 1), 1000)
@@ -46,7 +45,9 @@ export default function LoginPage() {
       setFieldErrors(getFieldErrors(err))
       setForm((prev) => ({ ...prev, password: '' }))
       if (err.response?.status === 429) {
-        const seconds = Number(getErrorMessage(err).match(/(\d+) seconds?/)?.[1])
+        // Retry-After (exposed via CORS); fall back to "Try again in N seconds." in the message.
+        const seconds =
+          Number(err.response.headers['retry-after']) || Number(getErrorMessage(err).match(/(\d+) seconds?/)?.[1])
         if (seconds > 0) setRetryIn(seconds)
       }
       setSubmitting(false)
