@@ -13,8 +13,8 @@ import { useApiList } from '../../lib/useApiList.js'
 import { api, getErrorMessage, getFieldErrors } from '../../lib/api.js'
 import { formatDateTime, formatPercent } from '../../lib/format.js'
 import { formatMoney } from '../../lib/money.js'
-import { AccountStatusBadge } from '../badges.jsx'
-import TransactionList from '../TransactionList.jsx'
+import { AccountStatusBadge } from '../../components/StatusBadges.jsx'
+import TransactionList from '../../components/TransactionList.jsx'
 
 export default function AccountDetailPage() {
   const { accountNumber } = useParams()

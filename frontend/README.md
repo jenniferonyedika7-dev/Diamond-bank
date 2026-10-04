@@ -37,13 +37,15 @@ src/
   lib/money.js        formatMoney(amount): GMD via Intl.NumberFormat('en-GM')
   lib/format.js       formatPercent(rate), formatDate(value), todayIso()
   auth/               AuthProvider (user, login, logout, refresh), useAuth, ProtectedRoute, PublicOnlyRoute
-  components/         AppLayout (header), AuthLayout, FormField, Button, Alert, Modal, ConfirmDialog, Pagination, …
+  components/         AppLayout (header), SideNavLayout, FormField, Button, Alert, Modal, ConfirmDialog, ReasonDialog, TransactionList, StatusBadges, …
   pages/              Login, RegisterCustomer, RegisterStaff, ChangePassword, Dashboard (staff/customer placeholder)
   lib/useApiList.js   list loading (plain or paginated) + useDebounced
   admin/              AdminLayout (sidebar), ResourcePage (table + form + delete for one resource)
   admin/pages/        Overview, BankSettings, Branches, AccountTypes, CardTypes, Departments, Staff
-  staff/              StaffShell (loads the branch for the header), StaffLayout (sidebar), TransactionList, badges
+  staff/              StaffShell (loads the branch for the header), StaffLayout (sidebar)
   staff/pages/        Dashboard, Customers, CustomerDetail, AccountDetail
+  customer/           CustomerShell (loads /customer/overview for the area), CustomerLayout (sidebar), KycNotice, AccountCards
+  customer/pages/     Overview, Accounts, AccountDetail, Transfer (3 steps), Profile
   shared/             AuditLogPage (/staff/audit-log and /admin/audit-log)
 ```
 
@@ -62,6 +64,8 @@ How the API client behaves:
 - 429 login lockout: the login page counts down from the `Retry-After` header (exposed via CORS), falling back to N in "Try again in N seconds.".
 - Staff endpoints need a current branch (`employee_branch_lnk.end_date IS NULL`); without one they return 403 "You are not assigned to a branch. Contact the administrator." The audit log is the exception for admins.
 - Money moves only through the stored procedures. When one refuses (SQLSTATE 45000) the API returns 422 in the `{ success, message, data }` envelope with the procedure's message, which the UI shows as-is.
+- Customer endpoints are scoped to the signed-in customer. Someone else's account number gets the same 404 "Account not found." as a non-existent one. Transfer lookup gives one identical 422 for missing, frozen and closed accounts, and only ever returns a masked name ("A*** J***").
+- Transfers need the customer's password and are limited to 5 attempts per minute (lookups to 10). Over the limit → 429 with `Retry-After`.
 - Admin lists: `/admin/branches` and `/admin/staff` return `data: { items, pagination }`; the other lists return a plain array. Deleting something that is in use returns 409 with a message naming what uses it.
 
 ## Manual test checklist: auth (Phase B)
@@ -181,3 +185,57 @@ Starts from the current `bank_db`: Diamond Bank, Brikama Branch (BRK001), accoun
 
 **Mobile (~375px)**
 - [ ] The sidebar becomes a Menu button; the transaction history becomes cards; dialogs fit the screen and close with Escape.
+
+## Manual test checklist: customer area (Phase E)
+
+No migration is needed for this phase. Starts from the current `bank_db`: Diamond Bank, Brikama Branch, Savings (minimum 500) and Current (minimum 1000), the admin, ACTIVE `teststaff`, and VERIFIED **Test Customer** (`testcustomer`) with Savings account **DB0010000001**.
+
+**Setup (as teststaff, in a private window)**
+- [ ] Register a second customer at **/register**. Before verifying them, sign in as them in another window and check the PENDING notices (next section).
+- [ ] As teststaff: verify the second customer and open a **Current** account for them with 2000 (it gets the next number, e.g. **DB0010000002**). Make sure DB0010000001 has at least 1500 (deposit if needed).
+
+**KYC notices (second customer, before verification)**
+- [ ] Sign in → **/customer** with the sidebar Overview, Accounts, Transfer, Profile, Change password. Overview, Accounts and Transfer show only "Your identity is being verified. Visit Brikama Branch with your national ID." with no balances or transfer form. Profile still works.
+- [ ] After teststaff verifies them but before the account is opened, reload → "Visit a branch to open your first account."
+
+**Overview and account (testcustomer)**
+- [ ] Sign in as `testcustomer` → the overview shows the total balance, a Savings card for DB0010000001 with its balance and Active badge, and up to 5 recent transactions.
+- [ ] Open the account → balance, "Minimum balance D 500.00", interest, branch; the history has credits in green and debits in red. Filter Type = Deposits, then a From/To range with no activity → "No transactions match these filters." Clear filters.
+- [ ] In the address bar, open `/customer/accounts/DB0010000002` (the other customer's) → "Account not found.", the same as `/customer/accounts/DB0019999999`.
+
+**Transfer: lookup**
+- [ ] **Transfer**: From shows DB0010000001 with "You can send up to …" (balance minus 500).
+- [ ] Recipient `DB0019999999`, amount 200 → Continue → "This account can't receive transfers. Check the number and try again." under the recipient field.
+- [ ] Recipient = your own number → "You can't transfer to the same account."
+- [ ] Amount `0`, or `12.345` → the amount error, and no request is sent.
+
+**Transfer: review, password, result**
+- [ ] Recipient `DB0010000002`, amount 200, description "Test" → Continue → **"Send D 200.00 to X*** Y*** (DB0010000002)"**: the second customer's initials only, never their full name.
+- [ ] Wrong password → "The password is incorrect." under the field; still on the review step. Balances are unchanged (check the overview after).
+- [ ] Back → change the amount to more than "you can send" (e.g. balance − 400) → Continue → correct password → Step 3 shows "Insufficient funds: this transfer would take the account below its minimum balance." and "No money was moved." → Back to edit.
+- [ ] Amount 200, correct password, then **double-click Send money** → the button shows "Sending…" and is disabled; **only one** transfer happens. Step 3: "Transfer complete. You sent D 200.00 to X*** Y*** (DB0010000002)" and the new balance.
+- [ ] The overview and account history show **Transfer out −D 200.00** (channel ONLINE). Sign in as the second customer → **Transfer in +D 200.00** on DB0010000002.
+
+**Frozen accounts**
+- [ ] As teststaff, **freeze DB0010000002**. As testcustomer, a lookup of DB0010000002 → the same "can't receive" message as the made-up number.
+- [ ] Unfreeze it and **freeze DB0010000001** instead. As testcustomer: the account card shows Frozen, the account page has no "Transfer from this account" button, and Transfer shows "None of your accounts can send money right now…" (the option is listed as "(frozen)" and disabled). Unfreeze afterwards.
+
+**Rate limit**
+- [ ] On the review step, submit a wrong password 5 times; the 6th attempt within a minute → "Too many attempts. Try again in N seconds."
+
+**Profile and password**
+- [ ] **Profile**: read-only details and "To change your details, visit your branch." There are no edit controls.
+- [ ] **Change password** (sidebar) works inside the customer area and returns to the overview.
+
+**Access**
+- [ ] As testcustomer, open `/staff` or `/admin` → redirected to `/customer`. As teststaff, open `/customer` → redirected to `/staff`.
+
+**Login page**
+- [ ] The link reads **"New customer? Register online"**.
+
+**Database check (MySQL Workbench)**
+- [ ] `SELECT action_type, user_id, record_id, details FROM audit_log WHERE action_type IN ('TRANSFER', 'TRANSFER_PASSWORD_FAILED') ORDER BY audit_log_id DESC;` shows one TRANSFER for the successful transfer and TRANSFER_PASSWORD_FAILED rows for the wrong passwords. None of them contain a password.
+- [ ] `SELECT * FROM transfer ORDER BY transfer_id DESC LIMIT 3;` shows exactly one new COMPLETED row of 200.00 (the double-click didn't create two).
+
+**Mobile (~375px)**
+- [ ] The sidebar becomes a Menu button; account cards stack; the transfer steps and history cards fit the screen.

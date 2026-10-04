@@ -11,6 +11,10 @@ use App\Http\Controllers\Api\V1\Admin\TransactionTypeController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\BranchController;
+use App\Http\Controllers\Api\V1\Customer\AccountController as CustomerAccountController;
+use App\Http\Controllers\Api\V1\Customer\OverviewController as CustomerOverviewController;
+use App\Http\Controllers\Api\V1\Customer\ProfileController;
+use App\Http\Controllers\Api\V1\Customer\TransferController;
 use App\Http\Controllers\Api\V1\Staff\AccountController;
 use App\Http\Controllers\Api\V1\Staff\AuditLogController;
 use App\Http\Controllers\Api\V1\Staff\CustomerController;
@@ -52,6 +56,16 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::post('staff/{staffUser}/reject', [StaffController::class, 'reject'])->name('staff.reject');
                 Route::post('staff/{staffUser}/block', [StaffController::class, 'block'])->name('staff.block');
                 Route::post('staff/{staffUser}/unblock', [StaffController::class, 'unblock'])->name('staff.unblock');
+            });
+
+            // Customers see and act on their own data only (scoped by users.customer_id in every query).
+            Route::prefix('customer')->name('customer.')->middleware('role:customer')->group(function () {
+                Route::get('overview', CustomerOverviewController::class)->name('overview');
+                Route::get('profile', ProfileController::class)->name('profile');
+                Route::get('accounts/{accountNumber}', [CustomerAccountController::class, 'show'])->name('accounts.show');
+                Route::get('accounts/{accountNumber}/transactions', [CustomerAccountController::class, 'transactions'])->name('accounts.transactions');
+                Route::post('transfers/lookup', [TransferController::class, 'lookup'])->middleware('throttle:customer-lookup')->name('transfers.lookup');
+                Route::post('transfers', [TransferController::class, 'store'])->middleware('throttle:customer-transfers')->name('transfers.store');
             });
 
             Route::prefix('staff')->name('staff.')->middleware('role:staff,admin')->group(function () {

@@ -94,7 +94,7 @@ export default function LoginPage() {
         <p>
           New customer?{' '}
           <Link to="/register" className="font-medium text-navy-700 underline-offset-2 hover:underline">
-            Open an account
+            Register online
           </Link>
         </p>
         <p>

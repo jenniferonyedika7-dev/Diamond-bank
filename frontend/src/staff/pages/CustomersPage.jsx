@@ -9,7 +9,7 @@ import PageHeader from '../../components/PageHeader.jsx'
 import Pagination from '../../components/Pagination.jsx'
 import { useApiList, useDebounced } from '../../lib/useApiList.js'
 import { formatDate } from '../../lib/format.js'
-import { KycBadge } from '../badges.jsx'
+import { KycBadge } from '../../components/StatusBadges.jsx'
 
 const TABS = [
   { id: 'pending', label: 'Pending KYC', status: 'PENDING', empty: 'No customers are waiting for KYC.' },

@@ -15,7 +15,13 @@ import AppLayout from './components/AppLayout.jsx'
 import FullPageSpinner from './components/FullPageSpinner.jsx'
 import { dashboardPath } from './lib/roles.js'
 import ChangePasswordPage from './pages/ChangePasswordPage.jsx'
-import DashboardPage from './pages/DashboardPage.jsx'
+import CustomerLayout from './customer/CustomerLayout.jsx'
+import CustomerShell from './customer/CustomerShell.jsx'
+import CustomerAccountDetailPage from './customer/pages/AccountDetailPage.jsx'
+import CustomerAccountsPage from './customer/pages/AccountsPage.jsx'
+import CustomerOverviewPage from './customer/pages/OverviewPage.jsx'
+import ProfilePage from './customer/pages/ProfilePage.jsx'
+import TransferPage from './customer/pages/TransferPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import RegisterCustomerPage from './pages/RegisterCustomerPage.jsx'
 import RegisterStaffPage from './pages/RegisterStaffPage.jsx'
@@ -76,8 +82,15 @@ export default function App() {
             </Route>
           </Route>
           <Route element={<ProtectedRoute roles={['customer']} />}>
-            <Route element={<AppLayout />}>
-              <Route path="/customer" element={<DashboardPage />} />
+            <Route element={<CustomerShell />}>
+              <Route path="/customer" element={<CustomerLayout />}>
+                <Route index element={<CustomerOverviewPage />} />
+                <Route path="accounts" element={<CustomerAccountsPage />} />
+                <Route path="accounts/:accountNumber" element={<CustomerAccountDetailPage />} />
+                <Route path="transfer" element={<TransferPage />} />
+                <Route path="profile" element={<ProfilePage />} />
+                <Route path="change-password" element={<ChangePasswordPage />} />
+              </Route>
             </Route>
           </Route>
 

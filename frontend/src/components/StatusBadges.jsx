@@ -1,4 +1,4 @@
-import Badge from '../components/Badge.jsx'
+import Badge from './Badge.jsx'
 
 const KYC = { PENDING: ['warning', 'KYC pending'], VERIFIED: ['success', 'Verified'], REJECTED: ['danger', 'KYC rejected'] }
 const ACCOUNT = { ACTIVE: ['success', 'Active'], FROZEN: ['info', 'Frozen'], CLOSED: ['neutral', 'Closed'] }

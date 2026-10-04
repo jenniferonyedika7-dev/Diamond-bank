@@ -10,8 +10,8 @@ import ReasonDialog from '../../components/ReasonDialog.jsx'
 import { api, getErrorMessage, getFieldErrors } from '../../lib/api.js'
 import { formatDate, formatDateTime } from '../../lib/format.js'
 import { formatMoney } from '../../lib/money.js'
-import { AccountStatusBadge, KycBadge, LoginStatusBadge } from '../badges.jsx'
-import TransactionList from '../TransactionList.jsx'
+import { AccountStatusBadge, KycBadge, LoginStatusBadge } from '../../components/StatusBadges.jsx'
+import TransactionList from '../../components/TransactionList.jsx'
 
 const GENDER = { M: 'Male', F: 'Female' }
 
