@@ -60,9 +60,14 @@ function cardType(string $name = 'Debit Classic'): object
     return DB::table('card_type')->where('card_type_id', $id)->first();
 }
 
-/** Inserts a card directly (test setup). Issued statuses get a real encrypted number, hash and dates. */
+/**
+ * Inserts a card directly (test setup). Issued statuses get a real encrypted number, hash and dates.
+ * requested_by defaults to the account owner's login (bank_card.requested_by is NOT NULL).
+ */
 function cardFor(object $account, string $status = 'REQUESTED', array $overrides = []): object
 {
+    $requestedBy = $overrides['requested_by'] ?? DB::table('users')->where('customer_id', $account->customer_id)->value('user_id')
+        ?? throw new LogicException("cardFor(): the account's customer has no login; pass requested_by.");
     $issued = ! in_array($status, ['REQUESTED', 'REJECTED'], true);
     $number = $issued ? CardNumber::generateUnique() : null;
 
@@ -75,6 +80,7 @@ function cardFor(object $account, string $status = 'REQUESTED', array $overrides
         'last4' => $number === null ? null : substr($number, -4),
         'issued_date' => $issued ? now()->toDateString() : null,
         'expiry_date' => $issued ? now()->addYears(3)->endOfMonth()->toDateString() : null,
+        'requested_by' => $requestedBy,
         'requested_at' => now(),
     ], $overrides), 'bank_card_id');
 
