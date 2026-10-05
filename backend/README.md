@@ -7,6 +7,7 @@ Laravel API for Diamond Bank. The React SPA and how to run both are described in
 > **Warning:** `APP_KEY` in `.env` protects card data. Losing or replacing it breaks every issued card.
 
 - `bank_card.card_number` is stored encrypted with `APP_KEY` (Laravel's `encrypted` cast). Screens only ever show `**** **** **** 1234`, from the separate `last4` column. No CVV is generated or stored.
+- The only endpoint that decrypts a card number is `POST /api/v1/customer/cards/{id}/reveal`. It serves the card's owner only, for ACTIVE cards, after their password (sharing the transfer throttle). It is audited as `CARD_NUMBER_REVEALED` with last4 only, and the response is `Cache-Control: no-store`.
 - `bank_card.card_number_hash` is an HMAC-SHA256 of the number keyed with `APP_KEY`. It keeps card numbers unique, since encrypted values can't carry a unique index.
 - **Never run `php artisan key:generate` on an existing install.** It replaces `APP_KEY`. After that, issued card numbers no longer decrypt, and new numbers are no longer checked against the hashes of existing cards.
 - **Back up `.env` outside git** (at least `APP_KEY`), for example in a password manager. `.env` is git-ignored, so a lost or overwritten `.env` means a lost key.

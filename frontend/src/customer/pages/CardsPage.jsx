@@ -5,6 +5,7 @@ import ConfirmDialog from '../../components/ConfirmDialog.jsx'
 import EmptyState from '../../components/EmptyState.jsx'
 import FormField from '../../components/FormField.jsx'
 import Loading from '../../components/Loading.jsx'
+import Modal from '../../components/Modal.jsx'
 import PageHeader from '../../components/PageHeader.jsx'
 import { CardStatusBadge } from '../../components/StatusBadges.jsx'
 import { api, getErrorMessage, getFieldErrors } from '../../lib/api.js'
@@ -16,6 +17,9 @@ import KycNotice from '../KycNotice.jsx'
 
 // An account has at most one card that is requested or active; a blocked card can be replaced.
 const LIVE = ['REQUESTED', 'ACTIVE']
+
+// A revealed card number is shown for this long, then hidden again.
+const REVEAL_SECONDS = 30
 
 export default function CardsPage() {
   const { overview } = useCustomerData()
@@ -84,6 +88,38 @@ export default function CardsPage() {
 }
 
 function CardTile({ card, onBlock }) {
+  // The full number lives only in this tile's state: never in context, storage or the URL.
+  // It is gone after REVEAL_SECONDS, when the tab is hidden, or when the page unmounts.
+  const [number, setNumber] = useState(null)
+  const [revealing, setRevealing] = useState(false)
+  const [copyNote, setCopyNote] = useState('')
+
+  useEffect(() => {
+    if (number === null) return undefined
+    const hide = () => {
+      setNumber(null)
+      setCopyNote('')
+    }
+    const timer = setTimeout(hide, REVEAL_SECONDS * 1000)
+    const onVisibility = () => document.hidden && hide()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [number])
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(number)
+      setCopyNote('Copied. Paste it where you need it, then clear your clipboard.')
+    } catch {
+      setCopyNote("Copy isn't available; select the number instead.")
+    }
+  }
+
+  const shown = card.status === 'ACTIVE' ? number : null
+
   return (
     <li className="flex flex-col rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
       <div className="flex items-center justify-between gap-2">
@@ -91,8 +127,28 @@ function CardTile({ card, onBlock }) {
         <CardStatusBadge status={card.status} />
       </div>
       <p className="mt-3 font-mono text-lg tracking-wider text-navy-900">
-        {card.masked_number ?? <span className="font-sans text-base tracking-normal text-slate-500">Number given on issue</span>}
+        {shown ? (
+          <span aria-label={`Card number ${shown.split('').join(' ')}`}>{shown.match(/.{1,4}/g).join(' ')}</span>
+        ) : (
+          (card.masked_number ?? <span className="font-sans text-base tracking-normal text-slate-500">Number given on issue</span>)
+        )}
       </p>
+      {shown && (
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+          <Button variant="secondary" className="py-1" onClick={copy}>
+            Copy
+          </Button>
+          <Button variant="secondary" className="py-1" onClick={() => setNumber(null)}>
+            Hide
+          </Button>
+          <span>Hides in {REVEAL_SECONDS} seconds.</span>
+          {copyNote && (
+            <p role="status" className="w-full text-xs text-slate-600">
+              {copyNote}
+            </p>
+          )}
+        </div>
+      )}
       <dl className="mt-2 space-y-0.5 text-sm text-slate-600">
         <div>
           <dt className="inline">Account: </dt>
@@ -119,13 +175,84 @@ function CardTile({ card, onBlock }) {
         <p className="mt-2 text-sm text-slate-600">Requested {formatDate(card.requested_at)}. Your branch will review it.</p>
       )}
       {card.status === 'ACTIVE' && (
-        <div className="mt-4">
+        <div className="mt-4 flex flex-wrap gap-2">
+          {!shown && (
+            <Button variant="secondary" className="py-1.5" onClick={() => setRevealing(true)}>
+              Show number<span className="sr-only"> of {card.masked_number}</span>
+            </Button>
+          )}
           <Button variant="secondary" className="py-1.5" onClick={onBlock}>
             Block card<span className="sr-only"> {card.masked_number}</span>
           </Button>
         </div>
       )}
+      {revealing && (
+        <RevealDialog
+          card={card}
+          onClose={() => setRevealing(false)}
+          onRevealed={(cardNumber) => {
+            setRevealing(false)
+            setCopyNote('')
+            setNumber(cardNumber)
+          }}
+        />
+      )}
     </li>
+  )
+}
+
+/** Asks for the password, then hands the number to the tile. The password is dropped when the dialog closes. */
+function RevealDialog({ card, onClose, onRevealed }) {
+  const [password, setPassword] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({})
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    setSubmitting(true)
+    setError('')
+    setFieldErrors({})
+    try {
+      const { data } = await api.post(`/api/v1/customer/cards/${card.bank_card_id}/reveal`, { password })
+      onRevealed(data.data.card_number)
+    } catch (err) {
+      const fields = getFieldErrors(err)
+      setFieldErrors(fields)
+      if (!fields.password) setError(getErrorMessage(err))
+      setPassword('')
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Modal title="Show card number" onClose={onClose}>
+      <form onSubmit={handleSubmit} noValidate className="space-y-4">
+        <p className="text-sm text-slate-600">
+          Enter your password to see the full number of <strong>{card.masked_number}</strong>. It is shown for {REVEAL_SECONDS}{' '}
+          seconds. Make sure no one is looking at your screen.
+        </p>
+        <Alert>{error}</Alert>
+        <FormField
+          id="reveal-password"
+          label="Password"
+          type="password"
+          autoComplete="current-password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          error={fieldErrors.password}
+        />
+        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={submitting} loadingText="Checking…" disabled={password === ''}>
+            Show number
+          </Button>
+        </div>
+      </form>
+    </Modal>
   )
 }
 

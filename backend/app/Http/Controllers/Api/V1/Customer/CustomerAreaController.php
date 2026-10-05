@@ -8,6 +8,8 @@ use App\Models\Account;
 use App\Services\AuditLogger;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Shared by the /api/v1/customer controllers. Everything is scoped to the
@@ -43,5 +45,24 @@ abstract class CustomerAreaController extends Controller
     {
         return $this->findOwnAccount($request, $accountNumber)
             ?? throw new HttpResponseException(ApiResponse::error('Account not found.', 404));
+    }
+
+    /**
+     * Re-checks the customer's password before a sensitive action (a transfer,
+     * revealing a card number). A wrong password writes $failedAction to the
+     * audit log with $details (never the password) and fails with a 422 on
+     * the password field. The calling route carries the throttle.
+     *
+     * @param  array<string, mixed>  $details
+     */
+    protected function confirmPassword(Request $request, string $password, string $failedAction, array $details): void
+    {
+        $user = $request->user();
+
+        if (! Hash::check($password, $user->password)) {
+            $this->audit->log($failedAction, 'users', $user->user_id, $details);
+
+            throw ValidationException::withMessages(['password' => 'The password is incorrect.']);
+        }
     }
 }

@@ -91,12 +91,7 @@ class CardController extends CustomerAreaController
         $customerId = $this->customerId($request);
 
         return DB::transaction(function () use ($cardId, $customerId, $reason) {
-            $card = DB::table('bank_card')
-                ->join('account', 'account.account_id', '=', 'bank_card.account_id')
-                ->where('bank_card.bank_card_id', $cardId)
-                ->where('account.customer_id', $customerId)
-                ->lockForUpdate()
-                ->first(['bank_card.bank_card_id', 'bank_card.status', 'bank_card.last4', 'account.account_number']);
+            $card = $this->ownCard($customerId, $cardId, lock: true);
 
             if ($card === null) {
                 return ApiResponse::error('Card not found.', 404);
@@ -118,5 +113,54 @@ class CardController extends CustomerAreaController
 
             return ApiResponse::success('Card blocked. You can request a replacement.');
         });
+    }
+
+    /**
+     * The full number of one of the customer's own ACTIVE cards, after their
+     * password. The only endpoint that decrypts a card number. It shares the
+     * transfer throttle (one budget of password attempts), audits last4 only,
+     * and the response must not be cached.
+     */
+    public function reveal(Request $request, string $cardId): JsonResponse
+    {
+        $password = $request->validate(['password' => ['required', 'string']])['password'];
+
+        $card = $this->ownCard($this->customerId($request), $cardId);
+        if ($card === null) {
+            return ApiResponse::error('Card not found.', 404);
+        }
+        if ($card->status !== 'ACTIVE') {
+            return ApiResponse::error("Only an active card's number can be shown.", 409);
+        }
+
+        $this->confirmPassword($request, $password, 'CARD_REVEAL_PASSWORD_FAILED', [
+            'bank_card_id' => $card->bank_card_id,
+            'last4' => $card->last4,
+        ]);
+
+        $number = BankCard::findOrFail($card->bank_card_id)->card_number;
+
+        $this->audit->log('CARD_NUMBER_REVEALED', 'bank_card', $card->bank_card_id, [
+            'account_number' => $card->account_number,
+            'last4' => $card->last4,
+        ]);
+
+        return ApiResponse::success('Card number.', [
+            'bank_card_id' => $card->bank_card_id,
+            'card_number' => $number,
+            'last4' => $card->last4,
+            'expiry_date' => $card->expiry_date,
+        ])->header('Cache-Control', 'no-store, private')->header('Pragma', 'no-cache');
+    }
+
+    /** The card if it is on one of this customer's accounts, otherwise null (callers answer 404). */
+    private function ownCard(int $customerId, string $cardId, bool $lock = false): ?object
+    {
+        return DB::table('bank_card')
+            ->join('account', 'account.account_id', '=', 'bank_card.account_id')
+            ->where('bank_card.bank_card_id', $cardId)
+            ->where('account.customer_id', $customerId)
+            ->when($lock, fn ($q) => $q->lockForUpdate())
+            ->first(['bank_card.bank_card_id', 'bank_card.status', 'bank_card.last4', 'bank_card.expiry_date', 'account.account_number']);
     }
 }

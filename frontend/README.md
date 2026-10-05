@@ -264,6 +264,10 @@ Never run `migrate:fresh` on `bank_db`. Read "Card data and APP_KEY" in `backend
 **Staff: issue, reject, unblock (teststaff)**
 - [ ] **Cards** → the Requests tab lists testcustomer's request. **Issue** → "Card issued: **** **** **** 1234." It moves to the Active tab with an expiry at the end of the month, 3 years out.
 - [ ] As testcustomer, the tile shows the masked number and expiry. **Block card** → confirm → Blocked. Request a replacement on the same account → accepted (a blocked card doesn't count).
+- [ ] On an active card, **Show number** → enter a wrong password → "The password is incorrect." under the field. The correct password shows the full number in 4 groups, with **Copy** and **Hide**.
+  - It hides itself after 30 seconds, when you switch to another tab and back, and when you leave the Cards page.
+  - DevTools → Network: the `reveal` response has `Cache-Control: no-store`.
+  - 5 wrong passwords in a minute → the next attempt gets "Too many attempts…". This limit is shared with transfers.
 - [ ] As teststaff, the Blocked tab → **Unblock** the old card → it works (no other active card yet). The Requests tab → **Issue** the replacement → "This account already has an active card."
 - [ ] Reject the replacement with a reason → as testcustomer, the tile shows **Rejected** and the reason.
 - [ ] The customer detail page (staff) has a **Cards** section with masked numbers.
@@ -278,7 +282,7 @@ Never run `migrate:fresh` on `bank_db`. Read "Card data and APP_KEY" in `backend
 
 **Database check (MySQL Workbench)**
 - [ ] `SELECT bank_card_id, card_number, last4, status FROM bank_card;`: `card_number` is ciphertext (`eyJpdiI6…`), never the 16 digits. There is no CVV column.
-- [ ] `SELECT action_type, details FROM audit_log WHERE action_type LIKE 'CARD_%' OR action_type = 'USERNAME_CHANGED' ORDER BY audit_log_id DESC;` lists every step. USERNAME_CHANGED shows the old → new name, and no row contains a full card number.
+- [ ] `SELECT action_type, details FROM audit_log WHERE action_type LIKE 'CARD_%' OR action_type = 'USERNAME_CHANGED' ORDER BY audit_log_id DESC;` lists every step. USERNAME_CHANGED shows the old → new name. `CARD_NUMBER_REVEALED` and `CARD_REVEAL_PASSWORD_FAILED` rows hold last4 only. No row contains a full card number or a password.
 
 **Mobile (~375px)**
 - [ ] The card tiles stack, the staff card rows wrap their buttons, and the admin accounts table scrolls sideways inside its card.

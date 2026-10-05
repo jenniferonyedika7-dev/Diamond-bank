@@ -80,6 +80,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::get('cards', [CustomerCardController::class, 'index'])->name('cards.index');
                 Route::post('cards', [CustomerCardController::class, 'store'])->name('cards.store');
                 Route::post('cards/{cardId}/block', [CustomerCardController::class, 'block'])->whereNumber('cardId')->name('cards.block');
+                // Shares the transfer throttle: one budget of password attempts per user.
+                Route::post('cards/{cardId}/reveal', [CustomerCardController::class, 'reveal'])->whereNumber('cardId')->middleware('throttle:customer-transfers')->name('cards.reveal');
             });
 
             Route::prefix('staff')->name('staff.')->middleware('role:staff,admin')->group(function () {

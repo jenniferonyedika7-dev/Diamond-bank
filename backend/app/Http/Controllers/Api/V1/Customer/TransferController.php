@@ -9,7 +9,6 @@ use App\Support\StoredProcedure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class TransferController extends CustomerAreaController
@@ -44,15 +43,11 @@ class TransferController extends CustomerAreaController
         $user = $request->user();
         $data = $request->validated();
 
-        if (! Hash::check($data['password'], $user->password)) {
-            $this->audit->log('TRANSFER_PASSWORD_FAILED', 'users', $user->user_id, [
-                'from_account_number' => $data['from_account_number'],
-                'to_account_number' => $data['to_account_number'],
-                'amount' => $data['amount'],
-            ]);
-
-            throw ValidationException::withMessages(['password' => 'The password is incorrect.']);
-        }
+        $this->confirmPassword($request, $data['password'], 'TRANSFER_PASSWORD_FAILED', [
+            'from_account_number' => $data['from_account_number'],
+            'to_account_number' => $data['to_account_number'],
+            'amount' => $data['amount'],
+        ]);
 
         $from = $this->findOwnAccount($request, $data['from_account_number']);
         if ($from === null) {
