@@ -1,3 +1,23 @@
+# Diamond Bank backend
+
+Laravel API for Diamond Bank. The React SPA and how to run both are described in `../frontend/README.md`; calling the API from Postman is in `docs/postman-auth.md`.
+
+## Card data and APP_KEY
+
+> **Warning:** `APP_KEY` in `.env` protects card data. Losing or replacing it breaks every issued card.
+
+- `bank_card.card_number` is stored encrypted with `APP_KEY` (Laravel's `encrypted` cast). Screens only ever show `**** **** **** 1234`, from the separate `last4` column. No CVV is generated or stored.
+- `bank_card.card_number_hash` is an HMAC-SHA256 of the number keyed with `APP_KEY`. It keeps card numbers unique, since encrypted values can't carry a unique index.
+- **Never run `php artisan key:generate` on an existing install.** It replaces `APP_KEY`. After that, issued card numbers no longer decrypt, and new numbers are no longer checked against the hashes of existing cards.
+- **Back up `.env` outside git** (at least `APP_KEY`), for example in a password manager. `.env` is git-ignored, so a lost or overwritten `.env` means a lost key.
+- Key rotation is possible but not casual. Put the old key in `APP_PREVIOUS_KEYS` so existing card numbers still decrypt, re-encrypt them, and recompute `card_number_hash` with the new key. Plan and test this on a copy of the database first.
+
+## Database
+
+`bank_db` holds real data. Change it only with forward migrations (`php artisan migrate`), never `migrate:fresh`, `migrate:refresh` or `db:wipe`. Check what a migration will do first with `php artisan migrate --pretend`. Tests run on `bank_db_testing` (see `phpunit.xml`).
+
+---
+
 <p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
 
 <p align="center">

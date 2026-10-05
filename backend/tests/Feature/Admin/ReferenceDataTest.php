@@ -12,7 +12,8 @@ beforeEach(function () {
 it('creates, updates and deletes an account type with audit rows', function () {
     $id = $this->postJson('/api/v1/admin/account-types', ['type_name' => 'SAVINGS', 'interest_rate' => '3.5', 'minimum_balance' => 100])
         ->assertCreated()
-        ->assertJson(['data' => ['type_name' => 'SAVINGS', 'interest_rate' => '3.50', 'minimum_balance' => '100.00']])
+        // Names are stored in Title Case.
+        ->assertJson(['data' => ['type_name' => 'Savings', 'interest_rate' => '3.50', 'minimum_balance' => '100.00']])
         ->json('data.account_type_id');
 
     $this->putJson("/api/v1/admin/account-types/{$id}", ['type_name' => 'SAVINGS', 'interest_rate' => 4, 'minimum_balance' => 50])
@@ -57,6 +58,27 @@ it('requires a positive card daily limit and a unique name', function () {
         ->assertCreated()->assertJsonPath('data.daily_limit', '5000.50');
 
     $this->postJson('/api/v1/admin/card-types', ['type_name' => 'DEBIT', 'daily_limit' => 100])
+        ->assertUnprocessable()->assertJsonValidationErrors('type_name');
+});
+
+it('refuses credit card types: there is no credit line', function (string $name) {
+    $this->postJson('/api/v1/admin/card-types', ['type_name' => $name, 'daily_limit' => 1000])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['type_name' => 'Only debit cards are supported.']);
+
+    $this->assertDatabaseCount('card_type', 0);
+})->with(['Credit', 'Gold credit card', 'CREDIT PLATINUM']);
+
+it('stores reference names in Title Case', function () {
+    $this->postJson('/api/v1/admin/card-types', ['type_name' => '  debit gold ', 'daily_limit' => 1000])
+        ->assertCreated()->assertJsonPath('data.type_name', 'Debit Gold');
+    $this->postJson('/api/v1/admin/departments', ['department_name' => 'CUSTOMER SERVICE'])
+        ->assertCreated()->assertJsonPath('data.department_name', 'Customer Service');
+    $this->postJson('/api/v1/admin/account-types', ['type_name' => 'fixed deposit', 'interest_rate' => 5, 'minimum_balance' => 0])
+        ->assertCreated()->assertJsonPath('data.type_name', 'Fixed Deposit');
+
+    // A different casing of an existing name is the same name.
+    $this->postJson('/api/v1/admin/card-types', ['type_name' => 'DEBIT GOLD', 'daily_limit' => 1000])
         ->assertUnprocessable()->assertJsonValidationErrors('type_name');
 });
 

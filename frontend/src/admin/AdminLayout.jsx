@@ -7,6 +7,7 @@ const ADMIN_NAV = [
   { to: '/admin/account-types', label: 'Account types' },
   { to: '/admin/card-types', label: 'Card types' },
   { to: '/admin/departments', label: 'Departments' },
+  { to: '/admin/customers', label: 'Customers' },
   { to: '/admin/staff', label: 'Staff' },
   { to: '/admin/audit-log', label: 'Audit log' },
 ]

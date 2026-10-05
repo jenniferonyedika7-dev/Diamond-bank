@@ -10,7 +10,7 @@ import ReasonDialog from '../../components/ReasonDialog.jsx'
 import { api, getErrorMessage, getFieldErrors } from '../../lib/api.js'
 import { formatDate, formatDateTime } from '../../lib/format.js'
 import { formatMoney } from '../../lib/money.js'
-import { AccountStatusBadge, KycBadge, LoginStatusBadge } from '../../components/StatusBadges.jsx'
+import { AccountStatusBadge, CardStatusBadge, KycBadge, LoginStatusBadge } from '../../components/StatusBadges.jsx'
 import TransactionList from '../../components/TransactionList.jsx'
 
 const GENDER = { M: 'Male', F: 'Female' }
@@ -177,6 +177,36 @@ export default function CustomerDetailPage() {
                     <span className="font-medium tabular-nums text-slate-900">{formatMoney(a.balance)}</span>
                   </span>
                 </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      {/* Cards (issue, reject and unblock on the Cards page) */}
+      <Card
+        title="Cards"
+        action={
+          <Link to="/staff/cards" className="text-sm font-medium text-navy-700 underline-offset-2 hover:underline">
+            Card requests
+          </Link>
+        }
+      >
+        {customer.cards.length === 0 ? (
+          <p className="text-sm text-slate-600">No cards or card requests.</p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {customer.cards.map((c) => (
+              <li key={c.bank_card_id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+                <span className="text-sm">
+                  <span className="text-slate-900">{c.card_type.type_name}</span>
+                  <span className="ml-2 font-mono text-slate-600">{c.masked_number ?? 'not issued'}</span>
+                  <span className="ml-2 font-mono text-xs text-slate-500">{c.account_number}</span>
+                </span>
+                <span className="flex items-center gap-3 text-xs text-slate-500">
+                  {c.expiry_date && `Expires ${formatDate(c.expiry_date)}`}
+                  <CardStatusBadge status={c.status} />
+                </span>
               </li>
             ))}
           </ul>

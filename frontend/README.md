@@ -239,3 +239,46 @@ No migration is needed for this phase. Starts from the current `bank_db`: Diamon
 
 **Mobile (~375px)**
 - [ ] The sidebar becomes a Menu button; account cards stack; the transfer steps and history cards fit the screen.
+
+## Manual test checklist: cards, admin customers and usernames (Phase F1)
+
+**Migrate first.** Run this in `backend/`, against `bank_db`:
+1. `php artisan migrate --pretend`: check the SQL.
+2. `php artisan migrate`: applies 3 forward migrations.
+
+What the migrations do:
+- `bank_card` gains request columns and an encrypted card number. This refuses to run if `bank_card` has rows.
+- Unused "credit" card types are removed.
+- Account type, card type and department names become Title Case.
+
+Never run `migrate:fresh` on `bank_db`. Read "Card data and APP_KEY" in `backend/README.md` before going further.
+
+**Setup**
+- [ ] As admin, **Card types** → add `credit gold` → "Only debit cards are supported." Add `debit silver` → it is saved as **Debit Silver**.
+
+**Customer: request and block (testcustomer)**
+- [ ] The sidebar has **Cards** → "You have no cards yet." and a "Request a debit card" form. The account list shows only active accounts without a card.
+- [ ] Request a Debit Classic card on DB0010000001 → "Card requested…". The tile shows **Requested** and "Number given on issue". The form now says each active account already has a card or a pending request.
+- [ ] As teststaff, freeze DB0010000001. As testcustomer, reload Cards → that account isn't offered. Unfreeze it.
+
+**Staff: issue, reject, unblock (teststaff)**
+- [ ] **Cards** → the Requests tab lists testcustomer's request. **Issue** → "Card issued: **** **** **** 1234." It moves to the Active tab with an expiry at the end of the month, 3 years out.
+- [ ] As testcustomer, the tile shows the masked number and expiry. **Block card** → confirm → Blocked. Request a replacement on the same account → accepted (a blocked card doesn't count).
+- [ ] As teststaff, the Blocked tab → **Unblock** the old card → it works (no other active card yet). The Requests tab → **Issue** the replacement → "This account already has an active card."
+- [ ] Reject the replacement with a reason → as testcustomer, the tile shows **Rejected** and the reason.
+- [ ] The customer detail page (staff) has a **Cards** section with masked numbers.
+- [ ] A staff member at another branch doesn't see these cards on their Cards page.
+
+**Admin: customers and usernames**
+- [ ] **Customers** → search, KYC and branch filters. Open testcustomer → profile, login and an accounts table (number, type, branch, status, balance). There are no edit, freeze or block buttons.
+- [ ] Keep testcustomer signed in in another browser. As admin, **Change username** → `testcustomer2` → "Username changed from testcustomer to testcustomer2." Reload the customer's browser → still signed in, and the header shows the new name.
+- [ ] Sign out the customer. `testcustomer` no longer signs in; `testcustomer2` does with the same password.
+- [ ] Try a taken username or `has space` → the error is shown under the field.
+- [ ] **Staff** → **Change username** on any staff card works the same way. There is no password option anywhere in the admin area.
+
+**Database check (MySQL Workbench)**
+- [ ] `SELECT bank_card_id, card_number, last4, status FROM bank_card;`: `card_number` is ciphertext (`eyJpdiI6…`), never the 16 digits. There is no CVV column.
+- [ ] `SELECT action_type, details FROM audit_log WHERE action_type LIKE 'CARD_%' OR action_type = 'USERNAME_CHANGED' ORDER BY audit_log_id DESC;` lists every step. USERNAME_CHANGED shows the old → new name, and no row contains a full card number.
+
+**Mobile (~375px)**
+- [ ] The card tiles stack, the staff card rows wrap their buttons, and the admin accounts table scrolls sideways inside its card.

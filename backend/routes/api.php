@@ -4,19 +4,23 @@ use App\Http\Controllers\Api\V1\Admin\AccountTypeController;
 use App\Http\Controllers\Api\V1\Admin\BankController;
 use App\Http\Controllers\Api\V1\Admin\BranchController as AdminBranchController;
 use App\Http\Controllers\Api\V1\Admin\CardTypeController;
+use App\Http\Controllers\Api\V1\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
 use App\Http\Controllers\Api\V1\Admin\OverviewController;
 use App\Http\Controllers\Api\V1\Admin\StaffController;
 use App\Http\Controllers\Api\V1\Admin\TransactionTypeController;
+use App\Http\Controllers\Api\V1\Admin\UsernameController;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\Customer\AccountController as CustomerAccountController;
+use App\Http\Controllers\Api\V1\Customer\CardController as CustomerCardController;
 use App\Http\Controllers\Api\V1\Customer\OverviewController as CustomerOverviewController;
 use App\Http\Controllers\Api\V1\Customer\ProfileController;
 use App\Http\Controllers\Api\V1\Customer\TransferController;
 use App\Http\Controllers\Api\V1\Staff\AccountController;
 use App\Http\Controllers\Api\V1\Staff\AuditLogController;
+use App\Http\Controllers\Api\V1\Staff\CardController as StaffCardController;
 use App\Http\Controllers\Api\V1\Staff\CustomerController;
 use App\Http\Controllers\Api\V1\Staff\MeController;
 use App\Http\Controllers\Api\V1\Staff\OverviewController as StaffOverviewController;
@@ -56,6 +60,12 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::post('staff/{staffUser}/reject', [StaffController::class, 'reject'])->name('staff.reject');
                 Route::post('staff/{staffUser}/block', [StaffController::class, 'block'])->name('staff.block');
                 Route::post('staff/{staffUser}/unblock', [StaffController::class, 'unblock'])->name('staff.unblock');
+                Route::put('staff/{staffUser}/username', [UsernameController::class, 'staff'])->name('staff.username');
+
+                // Read-only, apart from renaming the customer's login. There is no admin password route.
+                Route::get('customers', [AdminCustomerController::class, 'index'])->name('customers.index');
+                Route::get('customers/{customer}', [AdminCustomerController::class, 'show'])->name('customers.show');
+                Route::put('customers/{customer}/username', [UsernameController::class, 'customer'])->name('customers.username');
             });
 
             // Customers see and act on their own data only (scoped by users.customer_id in every query).
@@ -66,6 +76,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::get('accounts/{accountNumber}/transactions', [CustomerAccountController::class, 'transactions'])->name('accounts.transactions');
                 Route::post('transfers/lookup', [TransferController::class, 'lookup'])->middleware('throttle:customer-lookup')->name('transfers.lookup');
                 Route::post('transfers', [TransferController::class, 'store'])->middleware('throttle:customer-transfers')->name('transfers.store');
+                Route::get('card-types', [CustomerCardController::class, 'types'])->name('card-types.index');
+                Route::get('cards', [CustomerCardController::class, 'index'])->name('cards.index');
+                Route::post('cards', [CustomerCardController::class, 'store'])->name('cards.store');
+                Route::post('cards/{cardId}/block', [CustomerCardController::class, 'block'])->whereNumber('cardId')->name('cards.block');
             });
 
             Route::prefix('staff')->name('staff.')->middleware('role:staff,admin')->group(function () {
@@ -93,6 +107,12 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                     Route::post('accounts/{account}/withdraw', [AccountController::class, 'withdraw'])->name('accounts.withdraw');
                     Route::post('accounts/{account}/freeze', [AccountController::class, 'freeze'])->name('accounts.freeze');
                     Route::post('accounts/{account}/unfreeze', [AccountController::class, 'unfreeze'])->name('accounts.unfreeze');
+
+                    // Cards on accounts held at this branch.
+                    Route::get('cards', [StaffCardController::class, 'index'])->name('cards.index');
+                    Route::post('cards/{cardId}/issue', [StaffCardController::class, 'issue'])->whereNumber('cardId')->name('cards.issue');
+                    Route::post('cards/{cardId}/reject', [StaffCardController::class, 'reject'])->whereNumber('cardId')->name('cards.reject');
+                    Route::post('cards/{cardId}/unblock', [StaffCardController::class, 'unblock'])->whereNumber('cardId')->name('cards.unblock');
                 });
             });
         });

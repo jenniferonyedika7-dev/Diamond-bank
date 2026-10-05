@@ -14,6 +14,7 @@ import Spinner from '../../components/Spinner.jsx'
 import { api, getErrorMessage, getFieldErrors } from '../../lib/api.js'
 import { formatDate } from '../../lib/format.js'
 import { useApiList, useDebounced } from '../../lib/useApiList.js'
+import UsernameDialog from '../UsernameDialog.jsx'
 
 const REASON_COPY = {
   reject: {
@@ -48,7 +49,7 @@ export default function StaffPage() {
     search: debouncedSearch || undefined,
   })
 
-  const [action, setAction] = useState(null) // { type: 'approve'|'reject'|'block'|'unblock', user }
+  const [action, setAction] = useState(null) // { type: 'approve'|'reject'|'block'|'unblock'|'username', user }
   const [flash, setFlash] = useState('')
 
   function selectTab(id) {
@@ -65,7 +66,7 @@ export default function StaffPage() {
 
   return (
     <section>
-      <PageHeader title="Staff" description="Approve new staff registrations, and block or unblock staff accounts." />
+      <PageHeader title="Staff" description="Approve new staff registrations, block or unblock staff accounts, and change usernames." />
 
       <div role="tablist" aria-label="Staff by status" className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200">
         {TABS.map((t) => (
@@ -136,6 +137,15 @@ export default function StaffPage() {
           }}
         />
       )}
+      {action?.type === 'username' && (
+        <UsernameDialog
+          endpoint={`/api/v1/admin/staff/${action.user.user_id}/username`}
+          name={action.user.full_name}
+          currentUserName={action.user.user_name}
+          onClose={() => setAction(null)}
+          onDone={done}
+        />
+      )}
       {action?.type === 'unblock' && (
         <ConfirmDialog
           title="Unblock staff member?"
@@ -181,7 +191,7 @@ function StaffCard({ user, tab, onAction }) {
             <Detail label="Registered" value={formatDate(user.created_at)} />
           </dl>
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
           {tab === 'pending' && (
             <>
               <Button onClick={() => onAction('approve')}>
@@ -202,6 +212,9 @@ function StaffCard({ user, tab, onAction }) {
               Unblock<span className="sr-only"> {user.full_name}</span>
             </Button>
           )}
+          <Button variant="secondary" onClick={() => onAction('username')}>
+            Change username<span className="sr-only"> for {user.full_name}</span>
+          </Button>
         </div>
       </div>
     </li>

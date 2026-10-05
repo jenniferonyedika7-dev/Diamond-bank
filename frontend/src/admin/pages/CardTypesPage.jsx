@@ -5,7 +5,7 @@ const config = {
   endpoint: '/api/v1/admin/card-types',
   idKey: 'card_type_id',
   title: 'Card types',
-  description: 'The kinds of bank card that can be issued, with their daily spending limit.',
+  description: 'The kinds of debit card customers can request, with their daily spending limit.',
   singular: 'card type',
   emptyText: 'No card types yet. Add your first card type.',
   columns: [
@@ -14,7 +14,7 @@ const config = {
     { key: 'cards_count', label: 'Cards issued', align: 'right' },
   ],
   fields: [
-    { name: 'type_name', label: 'Name', maxLength: 50, hint: 'For example, DEBIT.' },
+    { name: 'type_name', label: 'Name', maxLength: 50, hint: 'Debit cards only, for example Debit Classic. Names are saved in Title Case.' },
     { name: 'daily_limit', label: 'Daily limit (GMD)', type: 'number', inputMode: 'decimal', min: 0.01, step: '0.01', hint: 'More than 0, up to 2 decimal places.' },
   ],
 }

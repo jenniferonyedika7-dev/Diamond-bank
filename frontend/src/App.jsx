@@ -4,6 +4,8 @@ import AccountTypesPage from './admin/pages/AccountTypesPage.jsx'
 import BankSettingsPage from './admin/pages/BankSettingsPage.jsx'
 import BranchesPage from './admin/pages/BranchesPage.jsx'
 import CardTypesPage from './admin/pages/CardTypesPage.jsx'
+import AdminCustomerDetailPage from './admin/pages/CustomerDetailPage.jsx'
+import AdminCustomersPage from './admin/pages/CustomersPage.jsx'
 import DepartmentsPage from './admin/pages/DepartmentsPage.jsx'
 import OverviewPage from './admin/pages/OverviewPage.jsx'
 import StaffPage from './admin/pages/StaffPage.jsx'
@@ -19,6 +21,7 @@ import CustomerLayout from './customer/CustomerLayout.jsx'
 import CustomerShell from './customer/CustomerShell.jsx'
 import CustomerAccountDetailPage from './customer/pages/AccountDetailPage.jsx'
 import CustomerAccountsPage from './customer/pages/AccountsPage.jsx'
+import CustomerCardsPage from './customer/pages/CardsPage.jsx'
 import CustomerOverviewPage from './customer/pages/OverviewPage.jsx'
 import ProfilePage from './customer/pages/ProfilePage.jsx'
 import TransferPage from './customer/pages/TransferPage.jsx'
@@ -27,6 +30,7 @@ import RegisterCustomerPage from './pages/RegisterCustomerPage.jsx'
 import RegisterStaffPage from './pages/RegisterStaffPage.jsx'
 import AuditLogPage from './shared/AuditLogPage.jsx'
 import AccountDetailPage from './staff/pages/AccountDetailPage.jsx'
+import StaffCardsPage from './staff/pages/CardsPage.jsx'
 import CustomerDetailPage from './staff/pages/CustomerDetailPage.jsx'
 import CustomersPage from './staff/pages/CustomersPage.jsx'
 import StaffDashboardPage from './staff/pages/DashboardPage.jsx'
@@ -65,6 +69,8 @@ export default function App() {
                 <Route path="account-types" element={<AccountTypesPage />} />
                 <Route path="card-types" element={<CardTypesPage />} />
                 <Route path="departments" element={<DepartmentsPage />} />
+                <Route path="customers" element={<AdminCustomersPage />} />
+                <Route path="customers/:id" element={<AdminCustomerDetailPage />} />
                 <Route path="staff" element={<StaffPage />} />
                 <Route path="audit-log" element={<AuditLogPage />} />
               </Route>
@@ -77,6 +83,7 @@ export default function App() {
                 <Route path="customers" element={<CustomersPage />} />
                 <Route path="customers/:id" element={<CustomerDetailPage />} />
                 <Route path="accounts/:accountNumber" element={<AccountDetailPage />} />
+                <Route path="cards" element={<StaffCardsPage />} />
                 <Route path="audit-log" element={<AuditLogPage />} />
               </Route>
             </Route>
@@ -88,6 +95,7 @@ export default function App() {
                 <Route path="accounts" element={<CustomerAccountsPage />} />
                 <Route path="accounts/:accountNumber" element={<CustomerAccountDetailPage />} />
                 <Route path="transfer" element={<TransferPage />} />
+                <Route path="cards" element={<CustomerCardsPage />} />
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="change-password" element={<ChangePasswordPage />} />
               </Route>

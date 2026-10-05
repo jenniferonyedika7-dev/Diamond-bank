@@ -18,3 +18,16 @@ export function LoginStatusBadge({ status }) {
   const [tone, label] = LOGIN[status] ?? ['neutral', status]
   return <Badge tone={tone}>{label}</Badge>
 }
+
+const CARD = {
+  REQUESTED: ['warning', 'Requested'],
+  ACTIVE: ['success', 'Active'],
+  BLOCKED: ['danger', 'Blocked'],
+  REJECTED: ['neutral', 'Rejected'],
+  EXPIRED: ['neutral', 'Expired'],
+}
+
+export function CardStatusBadge({ status }) {
+  const [tone, label] = CARD[status] ?? ['neutral', status]
+  return <Badge tone={tone}>{label}</Badge>
+}

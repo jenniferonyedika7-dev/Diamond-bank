@@ -2,6 +2,8 @@
 
 use App\Models\Customer;
 use App\Models\User;
+use App\Support\CardNumber;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
@@ -45,7 +47,36 @@ function customerRoutes(): array
         ->filter(fn ($route) => str_starts_with($route->uri(), 'api/v1/customer'))
         ->flatMap(fn ($route) => collect($route->methods())
             ->reject(fn ($method) => $method === 'HEAD')
-            ->map(fn ($method) => [$method, '/'.preg_replace('/\{[^}]+\}/', 'DB0019999999', $route->uri())]))
+            ->map(fn ($method) => [$method, '/'.preg_replace(['/\{cardId\}/', '/\{[^}]+\}/'], ['999999', 'DB0019999999'], $route->uri())]))
         ->values()
         ->all();
+}
+
+function cardType(string $name = 'Debit Classic'): object
+{
+    $id = DB::table('card_type')->where('type_name', $name)->value('card_type_id')
+        ?? DB::table('card_type')->insertGetId(['type_name' => $name, 'daily_limit' => 10000], 'card_type_id');
+
+    return DB::table('card_type')->where('card_type_id', $id)->first();
+}
+
+/** Inserts a card directly (test setup). Issued statuses get a real encrypted number, hash and dates. */
+function cardFor(object $account, string $status = 'REQUESTED', array $overrides = []): object
+{
+    $issued = ! in_array($status, ['REQUESTED', 'REJECTED'], true);
+    $number = $issued ? CardNumber::generateUnique() : null;
+
+    $id = DB::table('bank_card')->insertGetId(array_merge([
+        'account_id' => $account->account_id,
+        'card_type_id' => cardType()->card_type_id,
+        'status' => $status,
+        'card_number' => $number === null ? null : Crypt::encryptString($number),
+        'card_number_hash' => $number === null ? null : CardNumber::hash($number),
+        'last4' => $number === null ? null : substr($number, -4),
+        'issued_date' => $issued ? now()->toDateString() : null,
+        'expiry_date' => $issued ? now()->addYears(3)->endOfMonth()->toDateString() : null,
+        'requested_at' => now(),
+    ], $overrides), 'bank_card_id');
+
+    return DB::table('bank_card')->where('bank_card_id', $id)->first();
 }

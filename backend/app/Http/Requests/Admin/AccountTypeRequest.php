@@ -3,10 +3,19 @@
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class AccountTypeRequest extends FormRequest
 {
+    /** Names are stored in Title Case ("SAVINGS" -> "Savings"). */
+    protected function prepareForValidation(): void
+    {
+        if (is_string($this->input('type_name'))) {
+            $this->merge(['type_name' => Str::title(trim($this->input('type_name')))]);
+        }
+    }
+
     public function rules(): array
     {
         return [

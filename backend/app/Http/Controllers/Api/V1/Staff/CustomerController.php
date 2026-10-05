@@ -6,6 +6,8 @@ use App\Http\Requests\ReasonRequest;
 use App\Http\Requests\Staff\UpdateCustomerRequest;
 use App\Http\Responses\ApiResponse;
 use App\Models\Customer;
+use App\Queries\CardDirectory;
+use App\Queries\CustomerDirectory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,55 +21,20 @@ class CustomerController extends StaffAreaController
             'search' => ['nullable', 'string', 'max:100'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
-        $search = trim($filters['search'] ?? '');
 
-        $customers = DB::table('customer')
-            ->join('branch', 'branch.branch_id', '=', 'customer.branch_id')
-            ->leftJoin('users', 'users.customer_id', '=', 'customer.customer_id')
-            ->when($filters['kyc_status'] ?? null, fn ($q, $status) => $q->where('customer.kyc_status', $status))
-            ->when($search !== '', fn ($q) => $q->where(fn ($q) => $q
-                ->where(DB::raw("CONCAT(customer.first_name, ' ', customer.last_name)"), 'like', "%{$search}%")
-                ->orWhere('customer.national_id', 'like', "%{$search}%")
-                ->orWhere('customer.phone', 'like', "%{$search}%")
-                ->orWhere('customer.email', 'like', "%{$search}%")
-                ->orWhere('users.user_name', 'like', "%{$search}%")))
-            ->orderByDesc('customer.registration_date')
-            ->orderByDesc('customer.customer_id')
-            ->select([
-                'customer.customer_id', 'customer.first_name', 'customer.last_name', 'customer.national_id',
-                'customer.phone', 'customer.email', 'customer.kyc_status', 'customer.registration_date',
-                'branch.branch_id', 'branch.branch_name', 'users.user_name', 'users.status as user_status',
-            ])
-            ->selectSub(DB::table('account')->selectRaw('count(*)')->whereColumn('account.customer_id', 'customer.customer_id'), 'accounts_count')
-            ->paginate($filters['per_page'] ?? 15)
-            ->through(fn ($row) => [
-                'customer_id' => $row->customer_id,
-                'first_name' => $row->first_name,
-                'last_name' => $row->last_name,
-                'national_id' => $row->national_id,
-                'phone' => $row->phone,
-                'email' => $row->email,
-                'kyc_status' => $row->kyc_status,
-                'registration_date' => $row->registration_date,
-                'branch' => ['branch_id' => $row->branch_id, 'branch_name' => $row->branch_name],
-                'user_name' => $row->user_name,
-                'user_status' => $row->user_status,
-                'accounts_count' => (int) $row->accounts_count,
-            ]);
-
-        return ApiResponse::paginated('Customers.', $customers);
+        return ApiResponse::paginated('Customers.', CustomerDirectory::paginate($filters));
     }
 
     public function show(Customer $customer): JsonResponse
     {
         $customer->load(['branch', 'addresses', 'user']);
 
-        $accounts = DB::table('account')
-            ->join('account_type', 'account_type.account_type_id', '=', 'account.account_type_id')
+        $accounts = CustomerDirectory::accounts($customer->customer_id);
+
+        $cards = CardDirectory::query()
             ->where('account.customer_id', $customer->customer_id)
-            ->orderBy('account.opened_date')
-            ->get(['account.account_id', 'account.account_number', 'account_type.type_name', 'account.balance',
-                'account.currency_code', 'account.status', 'account.opened_date']);
+            ->get()
+            ->map(fn ($row) => CardDirectory::present($row));
 
         $recent = DB::table('transactions')
             ->join('account', 'account.account_id', '=', 'transactions.account_id')
@@ -92,6 +59,7 @@ class CustomerController extends StaffAreaController
             'addresses' => $customer->addresses,
             'login' => $customer->user?->only(['user_id', 'user_name', 'status', 'last_login']),
             'accounts' => $accounts,
+            'cards' => $cards,
             'recent_transactions' => $recent,
         ]);
     }
