@@ -16,7 +16,7 @@ class StoredProcedure
     /**
      * @param  list<mixed>  $arguments
      *
-     * @throws ProcedureFailed when the procedure signals SQLSTATE 45000
+     * @throws ProcedureFailed when the procedure signals SQLSTATE 45000 (422) or 45001 (409)
      */
     public static function call(string $name, array $arguments): object
     {
@@ -25,8 +25,13 @@ class StoredProcedure
         try {
             return DB::select("CALL {$name}({$placeholders})", $arguments)[0];
         } catch (QueryException $e) {
-            if ((string) $e->getCode() === '45000') {
-                throw new ProcedureFailed($e->errorInfo[2] ?? 'The operation was refused.', previous: $e);
+            $status = match ((string) $e->getCode()) {
+                '45000' => 422,
+                '45001' => 409,
+                default => null,
+            };
+            if ($status !== null) {
+                throw new ProcedureFailed($e->errorInfo[2] ?? 'The operation was refused.', $status, $e);
             }
             throw $e;
         }

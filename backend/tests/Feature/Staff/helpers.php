@@ -57,7 +57,7 @@ function staffRoutes(): array
         ->filter(fn ($route) => str_starts_with($route->uri(), 'api/v1/staff'))
         ->flatMap(fn ($route) => collect($route->methods())
             ->reject(fn ($method) => $method === 'HEAD')
-            ->map(fn ($method) => [$method, '/'.preg_replace('/\{[^}]+\}/', '999999', $route->uri())]))
+            ->map(fn ($method) => [$method, '/'.preg_replace(['/\{checkType\}/', '/\{[^}]+\}/'], ['BANK_STATEMENT', '999999'], $route->uri())]))
         ->values()
         ->all();
 }

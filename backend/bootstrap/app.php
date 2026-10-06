@@ -56,7 +56,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // A stored procedure refused the operation: its message is meant for the user.
         $exceptions->render(function (ProcedureFailed $e, Request $request) {
             if ($request->is('api/*')) {
-                return ApiResponse::error($e->getMessage(), 422);
+                return ApiResponse::error($e->getMessage(), $e->status);
             }
         });
 

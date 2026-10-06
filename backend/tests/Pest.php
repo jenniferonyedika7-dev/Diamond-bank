@@ -23,3 +23,4 @@ pest()->extend(TestCase::class)
 
 require_once __DIR__.'/Feature/Staff/helpers.php';
 require_once __DIR__.'/Feature/Customer/helpers.php';
+require_once __DIR__.'/Feature/loan_helpers.php';

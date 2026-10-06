@@ -47,7 +47,7 @@ function customerRoutes(): array
         ->filter(fn ($route) => str_starts_with($route->uri(), 'api/v1/customer'))
         ->flatMap(fn ($route) => collect($route->methods())
             ->reject(fn ($method) => $method === 'HEAD')
-            ->map(fn ($method) => [$method, '/'.preg_replace(['/\{cardId\}/', '/\{[^}]+\}/'], ['999999', 'DB0019999999'], $route->uri())]))
+            ->map(fn ($method) => [$method, '/'.preg_replace(['/\{(cardId|loanId)\}/', '/\{[^}]+\}/'], ['999999', 'DB0019999999'], $route->uri())]))
         ->values()
         ->all();
 }

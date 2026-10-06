@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\V1\Admin\BranchController as AdminBranchController;
 use App\Http\Controllers\Api\V1\Admin\CardTypeController;
 use App\Http\Controllers\Api\V1\Admin\CustomerController as AdminCustomerController;
 use App\Http\Controllers\Api\V1\Admin\DepartmentController;
+use App\Http\Controllers\Api\V1\Admin\LoanController as AdminLoanController;
+use App\Http\Controllers\Api\V1\Admin\LoanTypeController;
 use App\Http\Controllers\Api\V1\Admin\OverviewController;
 use App\Http\Controllers\Api\V1\Admin\StaffController;
 use App\Http\Controllers\Api\V1\Admin\TransactionTypeController;
@@ -15,6 +17,7 @@ use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\BranchController;
 use App\Http\Controllers\Api\V1\Customer\AccountController as CustomerAccountController;
 use App\Http\Controllers\Api\V1\Customer\CardController as CustomerCardController;
+use App\Http\Controllers\Api\V1\Customer\LoanController as CustomerLoanController;
 use App\Http\Controllers\Api\V1\Customer\OverviewController as CustomerOverviewController;
 use App\Http\Controllers\Api\V1\Customer\ProfileController;
 use App\Http\Controllers\Api\V1\Customer\TransferController;
@@ -22,8 +25,10 @@ use App\Http\Controllers\Api\V1\Staff\AccountController;
 use App\Http\Controllers\Api\V1\Staff\AuditLogController;
 use App\Http\Controllers\Api\V1\Staff\CardController as StaffCardController;
 use App\Http\Controllers\Api\V1\Staff\CustomerController;
+use App\Http\Controllers\Api\V1\Staff\LoanController as StaffLoanController;
 use App\Http\Controllers\Api\V1\Staff\MeController;
 use App\Http\Controllers\Api\V1\Staff\OverviewController as StaffOverviewController;
+use App\Models\Loan;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function () {
@@ -51,6 +56,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::apiResource('account-types', AccountTypeController::class)->except('show');
                 Route::apiResource('card-types', CardTypeController::class)->except('show');
                 Route::apiResource('departments', DepartmentController::class)->except('show');
+                Route::apiResource('loan-types', LoanTypeController::class)->except('show');
                 Route::get('transaction-types', [TransactionTypeController::class, 'index'])->name('transaction-types.index');
 
                 // {staffUser}: staff only; admin accounts get 403 (see StaffController::resolveStaffUser).
@@ -66,6 +72,13 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::get('customers', [AdminCustomerController::class, 'index'])->name('customers.index');
                 Route::get('customers/{customer}', [AdminCustomerController::class, 'show'])->name('customers.show');
                 Route::put('customers/{customer}/username', [UsernameController::class, 'customer'])->name('customers.username');
+
+                // Final (second) approval of loans at every branch; approving disburses (sp_disburse_loan).
+                Route::get('loans', [AdminLoanController::class, 'index'])->name('loans.index');
+                Route::get('loans/{loanId}', [AdminLoanController::class, 'show'])->whereNumber('loanId')->name('loans.show');
+                Route::get('loans/{loanId}/statement', [AdminLoanController::class, 'statement'])->whereNumber('loanId')->name('loans.statement');
+                Route::post('loans/{loanId}/approve', [AdminLoanController::class, 'approve'])->whereNumber('loanId')->name('loans.approve');
+                Route::post('loans/{loanId}/reject', [AdminLoanController::class, 'reject'])->whereNumber('loanId')->name('loans.reject');
             });
 
             // Customers see and act on their own data only (scoped by users.customer_id in every query).
@@ -82,6 +95,13 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::post('cards/{cardId}/block', [CustomerCardController::class, 'block'])->whereNumber('cardId')->name('cards.block');
                 // Shares the transfer throttle: one budget of password attempts per user.
                 Route::post('cards/{cardId}/reveal', [CustomerCardController::class, 'reveal'])->whereNumber('cardId')->middleware('throttle:customer-transfers')->name('cards.reveal');
+                Route::get('loan-types', [CustomerLoanController::class, 'types'])->name('loan-types.index');
+                Route::get('loans/apply-context', [CustomerLoanController::class, 'applyContext'])->name('loans.apply-context');
+                Route::post('loans/quote', [CustomerLoanController::class, 'quote'])->middleware('throttle:customer-lookup')->name('loans.quote');
+                Route::get('loans', [CustomerLoanController::class, 'index'])->name('loans.index');
+                Route::post('loans', [CustomerLoanController::class, 'store'])->name('loans.store');
+                Route::get('loans/{loanId}', [CustomerLoanController::class, 'show'])->whereNumber('loanId')->name('loans.show');
+                Route::post('loans/{loanId}/cancel', [CustomerLoanController::class, 'cancel'])->whereNumber('loanId')->name('loans.cancel');
             });
 
             Route::prefix('staff')->name('staff.')->middleware('role:staff,admin')->group(function () {
@@ -115,6 +135,15 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                     Route::post('cards/{cardId}/issue', [StaffCardController::class, 'issue'])->whereNumber('cardId')->name('cards.issue');
                     Route::post('cards/{cardId}/reject', [StaffCardController::class, 'reject'])->whereNumber('cardId')->name('cards.reject');
                     Route::post('cards/{cardId}/unblock', [StaffCardController::class, 'unblock'])->whereNumber('cardId')->name('cards.unblock');
+
+                    // Loans at this branch: the four checks and the first approval. No money moves here.
+                    Route::get('loans', [StaffLoanController::class, 'index'])->name('loans.index');
+                    Route::get('loans/{loanId}', [StaffLoanController::class, 'show'])->whereNumber('loanId')->name('loans.show');
+                    Route::get('loans/{loanId}/statement', [StaffLoanController::class, 'statement'])->whereNumber('loanId')->name('loans.statement');
+                    Route::put('loans/{loanId}/verifications/{checkType}', [StaffLoanController::class, 'recordCheck'])
+                        ->whereNumber('loanId')->whereIn('checkType', Loan::CHECKS)->name('loans.verifications.record');
+                    Route::post('loans/{loanId}/approve', [StaffLoanController::class, 'approve'])->whereNumber('loanId')->name('loans.approve');
+                    Route::post('loans/{loanId}/reject', [StaffLoanController::class, 'reject'])->whereNumber('loanId')->name('loans.reject');
                 });
             });
         });
