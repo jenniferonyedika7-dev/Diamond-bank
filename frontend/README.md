@@ -41,12 +41,14 @@ src/
   pages/              Login, RegisterCustomer, RegisterStaff, ChangePassword, Dashboard (staff/customer placeholder)
   lib/useApiList.js   list loading (plain or paginated) + useDebounced
   admin/              AdminLayout (sidebar), ResourcePage (table + form + delete for one resource)
-  admin/pages/        Overview, BankSettings, Branches, AccountTypes, CardTypes, Departments, Staff
+  admin/pages/        Overview, BankSettings, Branches, AccountTypes, CardTypes, LoanTypes, Departments, Customers, Staff, Loans, LoanDetail
   staff/              StaffShell (loads the branch for the header), StaffLayout (sidebar)
-  staff/pages/        Dashboard, Customers, CustomerDetail, AccountDetail
+  staff/pages/        Dashboard, Customers, CustomerDetail, AccountDetail, Cards, Loans, LoanDetail
   customer/           CustomerShell (loads /customer/overview for the area), CustomerLayout (sidebar), KycNotice, AccountCards
-  customer/pages/     Overview, Accounts, AccountDetail, Transfer (3 steps), Profile
+  customer/pages/     Overview, Accounts, AccountDetail, Transfer (3 steps), Cards, Loans, ApplyLoan (4 steps), LoanDetail, Profile
   shared/             AuditLogPage (/staff/audit-log and /admin/audit-log)
+  shared/loans/       LoanReviewList and LoanReviewDetail (staff and admin loan pages), ScheduleTable, LoanParts
+  lib/loans.js        loan labels, status tabs and the TIN/phone formats (no money arithmetic)
 ```
 
 How the API client behaves:
@@ -66,6 +68,9 @@ How the API client behaves:
 - Money moves only through the stored procedures. When one refuses (SQLSTATE 45000) the API returns 422 in the `{ success, message, data }` envelope with the procedure's message, which the UI shows as-is.
 - Customer endpoints are scoped to the signed-in customer. Someone else's account number gets the same 404 "Account not found." as a non-existent one. Transfer lookup gives one identical 422 for missing, frozen and closed accounts, and only ever returns a masked name ("A*** J***").
 - Transfers need the customer's password and are limited to 5 attempts per minute (lookups to 10). Over the limit → 429 with `Retry-After`.
+- Loans: the browser never calculates money. The quote, instalment, totals, schedule and affordability all come from the API. The apply form re-quotes 600 ms after the terms change, limited to 30 quotes a minute per customer (429 is shown in the quote panel).
+- Every loan needs two approvals: branch staff (after recording the four checks) and then an admin, whose approval pays the loan out through `sp_disburse_loan`. The same person can't make both; the procedure refuses with a 422 that the confirm dialog shows as-is.
+- Loan lists mask the TIN (`******789`); only the staff and admin loan detail shows it in full. Instalment statuses Overdue, Due and Upcoming are derived by the API from the due date (`display_status`), never stored.
 - Admin lists: `/admin/branches` and `/admin/staff` return `data: { items, pagination }`; the other lists return a plain array. Deleting something that is in use returns 409 with a message naming what uses it.
 
 ## Manual test checklist: auth (Phase B)
@@ -286,3 +291,42 @@ Never run `migrate:fresh` on `bank_db`. Read "Card data and APP_KEY" in `backend
 
 **Mobile (~375px)**
 - [ ] The card tiles stack, the staff card rows wrap their buttons, and the admin accounts table scrolls sideways inside its card.
+
+## Manual test checklist: loans (Phase F2a-2)
+
+**No migration in this phase.** The F2a-1 migrations must already be applied to `bank_db`. Never run `migrate:fresh` on `bank_db`. You need testcustomer (KYC verified, with an active account), teststaff at that account's branch, the admin, and a second staff member at another branch.
+
+**Loan types (admin)**
+- [ ] **Loan types** → add `personal` with rate `0` → "The interest rate must be greater than zero." under the field. Rate `12` → saved as **Personal**, 12.00%.
+- [ ] Add `Business` at 15%. Edit its rate to 14.5% → saved.
+
+**Apply, Monthly plan (testcustomer)**
+- [ ] The sidebar has **Loans** → "You have no loans yet." and **Apply for a loan**.
+- [ ] Step 1: pick Personal (the option shows its rate), the account, 10000, 12 months, Monthly instalments. Each plan has a one-line explanation. The quote shows the monthly instalment, 12 payments, total interest and total repayable. Change the amount to 500 → the minimum-loan message appears under Amount and Next is refused.
+- [ ] Step 2: TIN `123` → "The TIN must be 8 to 15 digits." Choose Employed → only employer name, workplace address, employer phone and job title appear. Switch to Content creator → only platform and account handle. Your profile phone and email are shown read-only with the "ask your branch" hint.
+- [ ] Step 3: the note says the bank will contact the guarantor. Fill in a guarantor.
+- [ ] Back to step 1 and forward again: everything you entered is still there.
+- [ ] Step 4: every value is listed with Edit links, plus the quote and a 12-row schedule with "(est.)" dates. Submit stays disabled until the confirmation box is ticked.
+- [ ] Using DevTools or a second tab, make the guarantor's phone your own profile phone and submit → you land on step 3 with "A guarantor can't be yourself…" under the phone.
+- [ ] Submit → back on Loans with "Loan application submitted…". The loan shows **Pending** with a Cancel button. **Apply for a loan** is gone, and a note explains you can have one loan at a time.
+
+**Staff checks and first approval (teststaff)**
+- [ ] **Loans** → the Pending tab (with counts) lists the loan: customer, amount, plan, term, applied date, TIN as `******789`, and the affordability %. If you entered a low income, an **Above 33%** badge shows.
+- [ ] Open it. You see the full TIN, the employment fields, the contact snapshot and the guarantor. The affordability panel says it's a warning, not a rule. The statement lists the last 6 months, paged.
+- [ ] **Approve** is disabled and lists the four missing checks. Record each check with a note, then update one → the newer note and time show.
+- [ ] **Approve** → confirm → "Loan approved. It now needs an administrator's approval." The loan is now **Awaiting admin**, and the Decisions panel shows your name and time.
+
+**Admin approval and disbursement**
+- [ ] **Loans** opens on **Awaiting admin**, and each row shows its branch. The detail shows a read-only checklist and the staff approver with the time.
+- [ ] Note testcustomer's account balance. **Approve and disburse** → the dialog names the amount and the account → "Loan approved. GMD 10,000.00 was paid into account …".
+- [ ] As testcustomer, the account balance went up by the loan amount, and the history shows a **Loan disbursement** transaction.
+- [ ] The loan detail shows **Active**, both approval dates and the schedule: instalment 1 **Due** and the rest **Upcoming**. There are no payment buttons.
+
+**Single plan, rejection, cancellation**
+- [ ] (After closing or rejecting the open loan, or as another customer.) Apply with **Single payment at the end** for 6 months → the quote shows one payment equal to the total repayable, and the review schedule has a single row.
+- [ ] As teststaff, **Reject** it with a reason → as the customer, Loans shows **Rejected** with the reason, and **Apply for a loan** is back.
+- [ ] Apply again. Staff record the checks and approve → **Awaiting admin**. The customer **Cancel**s → **Cancelled**. As admin, the loan is under the Cancelled tab with no actions. If you had it open, Approve → "This loan is no longer awaiting approval."
+
+**Scoping and audit**
+- [ ] Staff at another branch: the loan isn't on their Loans page, and opening `/staff/loans/<id>` shows "Loan not found."
+- [ ] **Audit log** (admin) shows LOAN_TYPE_CREATED, LOAN_TYPE_UPDATED, LOAN_APPLIED, LOAN_CHECK_RECORDED (one per record or update, with the before note on updates), LOAN_APPROVED_STAFF, LOAN_APPROVED_ADMIN (the disbursement), LOAN_REJECTED and LOAN_CANCELLED.

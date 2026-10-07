@@ -244,6 +244,33 @@ it('lists and shows only my loans, with the schedule and the rejection reason', 
         ->assertJsonPath('data.schedule.1.display_status', 'DUE');
 });
 
+it('shows the customer the staff approval date, never the approver', function () {
+    $staff = staffAtBranch(Branch::find($this->account->branch_id));
+    $loan = awaitingAdminLoan($this->me, $this->account, $staff);
+
+    $this->getJson("/api/v1/customer/loans/{$loan->loan_id}")
+        ->assertOk()
+        ->assertJsonPath('data.staff_approved_at', fn ($at) => $at !== null)
+        ->assertJsonPath('data.approval_date', null)
+        ->assertJsonMissingPath('data.staff_approval');
+    $this->getJson('/api/v1/customer/loans')->assertJsonPath('data.0.staff_approved_at', fn ($at) => $at !== null);
+
+    DB::table('loan')->where('loan_id', $loan->loan_id)->update(['status' => 'CANCELLED', 'staff_approved_by' => null, 'staff_approved_at' => null]);
+    $this->getJson("/api/v1/customer/loans/{$loan->loan_id}")->assertJsonPath('data.staff_approved_at', null);
+});
+
+it('rate-limits quotes to 30 per minute, separately from transfer lookups', function () {
+    $body = ['loan_type_id' => loanType()->loan_type_id, 'amount' => '10000', 'term_months' => 12, 'repayment_plan' => 'MONTHLY'];
+    foreach (range(1, 30) as $i) {
+        $this->postJson('/api/v1/customer/loans/quote', $body)->assertOk();
+    }
+    $this->postJson('/api/v1/customer/loans/quote', $body)
+        ->assertStatus(429)
+        ->assertHeader('Retry-After');
+
+    $this->postJson('/api/v1/customer/transfers/lookup', ['to_account_number' => 'DB0019999999'])->assertUnprocessable();
+});
+
 it('answers 404 for another customer\'s loan, on show and cancel', function () {
     $other = bankCustomer();
     $theirs = loanFor($other, accountFor($other, '100.00'));

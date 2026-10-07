@@ -7,6 +7,9 @@ import CardTypesPage from './admin/pages/CardTypesPage.jsx'
 import AdminCustomerDetailPage from './admin/pages/CustomerDetailPage.jsx'
 import AdminCustomersPage from './admin/pages/CustomersPage.jsx'
 import DepartmentsPage from './admin/pages/DepartmentsPage.jsx'
+import AdminLoanDetailPage from './admin/pages/LoanDetailPage.jsx'
+import AdminLoansPage from './admin/pages/LoansPage.jsx'
+import LoanTypesPage from './admin/pages/LoanTypesPage.jsx'
 import OverviewPage from './admin/pages/OverviewPage.jsx'
 import StaffPage from './admin/pages/StaffPage.jsx'
 import { AuthProvider } from './auth/AuthContext.jsx'
@@ -21,7 +24,10 @@ import CustomerLayout from './customer/CustomerLayout.jsx'
 import CustomerShell from './customer/CustomerShell.jsx'
 import CustomerAccountDetailPage from './customer/pages/AccountDetailPage.jsx'
 import CustomerAccountsPage from './customer/pages/AccountsPage.jsx'
+import ApplyLoanPage from './customer/pages/ApplyLoanPage.jsx'
 import CustomerCardsPage from './customer/pages/CardsPage.jsx'
+import CustomerLoanDetailPage from './customer/pages/LoanDetailPage.jsx'
+import CustomerLoansPage from './customer/pages/LoansPage.jsx'
 import CustomerOverviewPage from './customer/pages/OverviewPage.jsx'
 import ProfilePage from './customer/pages/ProfilePage.jsx'
 import TransferPage from './customer/pages/TransferPage.jsx'
@@ -34,6 +40,8 @@ import StaffCardsPage from './staff/pages/CardsPage.jsx'
 import CustomerDetailPage from './staff/pages/CustomerDetailPage.jsx'
 import CustomersPage from './staff/pages/CustomersPage.jsx'
 import StaffDashboardPage from './staff/pages/DashboardPage.jsx'
+import StaffLoanDetailPage from './staff/pages/LoanDetailPage.jsx'
+import StaffLoansPage from './staff/pages/LoansPage.jsx'
 import StaffLayout from './staff/StaffLayout.jsx'
 import StaffShell from './staff/StaffShell.jsx'
 
@@ -68,9 +76,12 @@ export default function App() {
                 <Route path="branches" element={<BranchesPage />} />
                 <Route path="account-types" element={<AccountTypesPage />} />
                 <Route path="card-types" element={<CardTypesPage />} />
+                <Route path="loan-types" element={<LoanTypesPage />} />
                 <Route path="departments" element={<DepartmentsPage />} />
                 <Route path="customers" element={<AdminCustomersPage />} />
                 <Route path="customers/:id" element={<AdminCustomerDetailPage />} />
+                <Route path="loans" element={<AdminLoansPage />} />
+                <Route path="loans/:loanId" element={<AdminLoanDetailPage />} />
                 <Route path="staff" element={<StaffPage />} />
                 <Route path="audit-log" element={<AuditLogPage />} />
               </Route>
@@ -84,6 +95,8 @@ export default function App() {
                 <Route path="customers/:id" element={<CustomerDetailPage />} />
                 <Route path="accounts/:accountNumber" element={<AccountDetailPage />} />
                 <Route path="cards" element={<StaffCardsPage />} />
+                <Route path="loans" element={<StaffLoansPage />} />
+                <Route path="loans/:loanId" element={<StaffLoanDetailPage />} />
                 <Route path="audit-log" element={<AuditLogPage />} />
               </Route>
             </Route>
@@ -96,6 +109,9 @@ export default function App() {
                 <Route path="accounts/:accountNumber" element={<CustomerAccountDetailPage />} />
                 <Route path="transfer" element={<TransferPage />} />
                 <Route path="cards" element={<CustomerCardsPage />} />
+                <Route path="loans" element={<CustomerLoansPage />} />
+                <Route path="loans/apply" element={<ApplyLoanPage />} />
+                <Route path="loans/:loanId" element={<CustomerLoanDetailPage />} />
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="change-password" element={<ChangePasswordPage />} />
               </Route>

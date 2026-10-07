@@ -30,6 +30,8 @@ class AppServiceProvider extends ServiceProvider
         // Customer transfers, per user: every attempt counts, including wrong passwords.
         RateLimiter::for('customer-lookup', fn (Request $request) => $this->perUserPerMinute($request, 10));
         RateLimiter::for('customer-transfers', fn (Request $request) => $this->perUserPerMinute($request, 5));
+        // The apply form re-quotes as the customer changes the terms, so it gets its own, looser limit.
+        RateLimiter::for('customer-loan-quote', fn (Request $request) => $this->perUserPerMinute($request, 30));
     }
 
     private function perUserPerMinute(Request $request, int $attempts): Limit

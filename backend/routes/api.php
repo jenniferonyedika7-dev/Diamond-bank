@@ -97,7 +97,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::post('cards/{cardId}/reveal', [CustomerCardController::class, 'reveal'])->whereNumber('cardId')->middleware('throttle:customer-transfers')->name('cards.reveal');
                 Route::get('loan-types', [CustomerLoanController::class, 'types'])->name('loan-types.index');
                 Route::get('loans/apply-context', [CustomerLoanController::class, 'applyContext'])->name('loans.apply-context');
-                Route::post('loans/quote', [CustomerLoanController::class, 'quote'])->middleware('throttle:customer-lookup')->name('loans.quote');
+                Route::post('loans/quote', [CustomerLoanController::class, 'quote'])->middleware('throttle:customer-loan-quote')->name('loans.quote');
                 Route::get('loans', [CustomerLoanController::class, 'index'])->name('loans.index');
                 Route::post('loans', [CustomerLoanController::class, 'store'])->name('loans.store');
                 Route::get('loans/{loanId}', [CustomerLoanController::class, 'show'])->whereNumber('loanId')->name('loans.show');

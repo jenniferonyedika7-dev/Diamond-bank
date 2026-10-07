@@ -7,6 +7,7 @@ const STAFF_NAV = [
   { to: '/staff', label: 'Dashboard', end: true },
   { to: '/staff/customers', label: 'Customers' },
   { to: '/staff/cards', label: 'Cards' },
+  { to: '/staff/loans', label: 'Loans' },
   { to: '/staff/audit-log', label: 'Audit log' },
 ]
 

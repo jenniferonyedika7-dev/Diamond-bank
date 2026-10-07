@@ -8,6 +8,7 @@ const CUSTOMER_NAV = [
   { to: '/customer/accounts', label: 'Accounts' },
   { to: '/customer/transfer', label: 'Transfer' },
   { to: '/customer/cards', label: 'Cards' },
+  { to: '/customer/loans', label: 'Loans' },
   { to: '/customer/profile', label: 'Profile' },
   { to: '/customer/change-password', label: 'Change password' },
 ]

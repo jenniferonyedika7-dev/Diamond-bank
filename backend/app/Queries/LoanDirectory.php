@@ -70,6 +70,7 @@ class LoanDirectory
             'account_number' => $row->account_number,
             'purpose_category' => $row->purpose_category,
             'application_date' => $row->application_date,
+            'staff_approved_at' => $row->staff_approved_at,
             'approval_date' => $row->approval_date,
             'rejection_reason' => $row->status === 'REJECTED' ? $row->rejection_reason : null,
             'rejected_at' => $row->rejected_at,
@@ -91,7 +92,6 @@ class LoanDirectory
             'monthly_income' => $row->monthly_income,
             'tin' => Tin::mask($row->tin),
             'affordability' => self::affordability($row),
-            'staff_approved_at' => $row->staff_approved_at,
         ];
     }
 

@@ -31,3 +31,31 @@ export function CardStatusBadge({ status }) {
   const [tone, label] = CARD[status] ?? ['neutral', status]
   return <Badge tone={tone}>{label}</Badge>
 }
+
+const LOAN = {
+  PENDING: ['warning', 'Pending'],
+  AWAITING_ADMIN: ['info', 'Awaiting admin'],
+  ACTIVE: ['success', 'Active'],
+  REJECTED: ['danger', 'Rejected'],
+  CANCELLED: ['neutral', 'Cancelled'],
+  CLOSED: ['neutral', 'Closed'],
+}
+
+export function LoanStatusBadge({ status }) {
+  const [tone, label] = LOAN[status] ?? ['neutral', status]
+  return <Badge tone={tone}>{label}</Badge>
+}
+
+// display_status from the API: OVERDUE, DUE and UPCOMING are derived from the due date, never stored.
+const INSTALMENT = {
+  PAID: ['success', 'Paid'],
+  SETTLED: ['neutral', 'Settled'],
+  OVERDUE: ['danger', 'Overdue'],
+  DUE: ['warning', 'Due'],
+  UPCOMING: ['info', 'Upcoming'],
+}
+
+export function InstalmentStatusBadge({ status }) {
+  const [tone, label] = INSTALMENT[status] ?? ['neutral', status]
+  return <Badge tone={tone}>{label}</Badge>
+}
