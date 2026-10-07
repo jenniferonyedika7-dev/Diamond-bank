@@ -3,7 +3,10 @@
 use App\Models\Loan;
 use App\Models\LoanType;
 use App\Models\User;
+use App\Queries\LoanDirectory;
 use App\Support\Amortisation;
+use Carbon\CarbonImmutable;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 function loanType(string $name = 'Personal', string $rate = '12.00'): LoanType
@@ -125,4 +128,65 @@ function loanRow(object $loan): object
 function scheduleFor(object $loan): array
 {
     return Amortisation::quote($loan->loan_amount, $loan->interest_rate, $loan->loan_term_months, $loan->repayment_plan, now('UTC')->startOfDay())['schedule'];
+}
+
+function expectProcedureError(string $sqlState, string $message, callable $call): void
+{
+    try {
+        $call();
+    } catch (QueryException $e) {
+        expect((string) $e->getCode())->toBe($sqlState)
+            ->and($e->getMessage())->toContain($message);
+
+        return;
+    }
+
+    test()->fail("Expected SQLSTATE {$sqlState}: {$message}");
+}
+
+/** Today as the database sees it (UTC_DATE()), which sp_repay_loan uses. */
+function dbToday(): CarbonImmutable
+{
+    return CarbonImmutable::parse(DB::selectOne('SELECT UTC_DATE() AS today')->today, 'UTC');
+}
+
+/**
+ * An ACTIVE loan disbursed on $disbursedOn (default: today), with the schedule
+ * sp_disburse_loan would have written that day: back-date it to make rows overdue.
+ * $paid instalments are marked PAID as if paid on their due dates (no loan_payment row).
+ */
+function activeLoanFor(User $customer, object $account, array $overrides = [], ?CarbonImmutable $disbursedOn = null, int $paid = 0): object
+{
+    $disbursedOn ??= dbToday();
+    $loan = loanFor($customer, $account, [
+        'status' => 'ACTIVE',
+        'approval_date' => $disbursedOn->setTime(10, 30),
+        ...$overrides,
+    ]);
+
+    foreach (Amortisation::quote($loan->loan_amount, $loan->interest_rate, $loan->loan_term_months, $loan->repayment_plan, $disbursedOn)['schedule'] as $row) {
+        $isPaid = $row['instalment_number'] <= $paid;
+        DB::table('loan_instalment')->insert([
+            'loan_id' => $loan->loan_id,
+            ...$row,
+            'status' => $isPaid ? 'PAID' : 'UNPAID',
+            'amount_paid' => $isPaid ? $row['amount'] : null,
+            'interest_waived' => $isPaid ? '0.00' : null,
+            'paid_at' => $isPaid ? $row['due_date'] : null,
+        ]);
+    }
+
+    return loanRow($loan);
+}
+
+/** @return list<object> the loan's instalments, in order */
+function instalmentsOf(object $loan): array
+{
+    return DB::table('loan_instalment')->where('loan_id', $loan->loan_id)->orderBy('instalment_number')->get()->all();
+}
+
+/** The quote the screens would show for this loan right now. */
+function repaymentQuoteFor(object $loan): array
+{
+    return LoanDirectory::repaymentQuote(loanRow($loan));
 }

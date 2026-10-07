@@ -170,3 +170,23 @@ it('refuses to delete a loan type that loans use', function () {
         ->assertStatus(409)
         ->assertJsonPath('message', "This loan type can't be deleted: it is used by 1 loan.");
 });
+
+it('shows the payment history read-only, with who received cash', function () {
+    $loan = activeLoanFor($this->customer, $this->account);
+    DB::select('CALL sp_repay_loan(?, ?, ?, ?, ?, ?, ?)', [$loan->loan_id, 'INSTALMENT', 'BRANCH', null, 1, '888.49', $this->staff->user_id]);
+
+    $this->getJson("/api/v1/admin/loans/{$loan->loan_id}")
+        ->assertOk()
+        ->assertJsonCount(1, 'data.payments')
+        ->assertJsonPath('data.payments.0.amount', '888.49')
+        ->assertJsonPath('data.payments.0.channel', 'BRANCH')
+        ->assertJsonPath('data.payments.0.instalments', [1])
+        ->assertJsonPath('data.payments.0.received_by.employee_id', $this->staff->employee_id)
+        ->assertJsonPath('data.schedule.0.status', 'PAID');
+
+    // There is no admin payment route; admins record cash in the staff area at a branch.
+    $this->postJson("/api/v1/admin/loans/{$loan->loan_id}/payments", ['payment_type' => 'INSTALMENT', 'instalment_number' => 2, 'amount' => '888.49'])
+        ->assertNotFound();
+    $this->getJson("/api/v1/admin/loans/{$loan->loan_id}/repayment")->assertNotFound();
+    expect(DB::table('loan_payment')->count())->toBe(1);
+});

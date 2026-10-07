@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1\Staff;
 
+use App\Http\Controllers\Concerns\RecordsLoanPayments;
 use App\Http\Controllers\Concerns\ReviewsLoans;
+use App\Http\Requests\LoanPaymentRequest;
 use App\Http\Requests\ReasonRequest;
 use App\Http\Responses\ApiResponse;
 use App\Models\Loan;
@@ -13,11 +15,13 @@ use Illuminate\Support\Facades\DB;
 /**
  * Loans at the staff member's current branch (loan.branch_id, the branch of
  * the disbursement account). Staff record the four checks, then make the first
- * approval (PENDING -> AWAITING_ADMIN) or reject. No money moves here: an admin
- * makes the second approval, which disburses (sp_disburse_loan).
+ * approval (PENDING -> AWAITING_ADMIN) or reject. An admin makes the second
+ * approval, which disburses (sp_disburse_loan). Once a loan is ACTIVE, staff
+ * record cash payments for it (sp_repay_loan, channel BRANCH).
  */
 class LoanController extends StaffAreaController
 {
+    use RecordsLoanPayments;
     use ReviewsLoans;
 
     public function index(Request $request): JsonResponse
@@ -114,6 +118,25 @@ class LoanController extends StaffAreaController
     public function reject(ReasonRequest $request, string $loanId): JsonResponse
     {
         return $this->rejectLoan($request, $loanId, 'PENDING', 'staff');
+    }
+
+    /** The next instalment and the pay-everything-now amount, for the cash payment form. */
+    public function repayment(Request $request, string $loanId): JsonResponse
+    {
+        $loan = $this->findLoan($request, $loanId);
+
+        return $loan === null ? $this->loanNotFound() : $this->quoteResponse($loan);
+    }
+
+    /** Records cash taken at this branch. No account or transaction is involved; received_by is this employee. */
+    public function pay(LoanPaymentRequest $request, string $loanId): JsonResponse
+    {
+        $loan = $this->findLoan($request, $loanId);
+        if ($loan === null) {
+            return $this->loanNotFound();
+        }
+
+        return $this->recordPayment($request, $loan, 'BRANCH', null);
     }
 
     protected function loanBranchId(Request $request): ?int

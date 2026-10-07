@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1\Customer;
 
+use App\Http\Controllers\Concerns\RecordsLoanPayments;
 use App\Http\Requests\Customer\LoanApplicationRequest;
+use App\Http\Requests\Customer\LoanPaymentRequest;
 use App\Http\Requests\Customer\LoanQuoteRequest;
 use App\Http\Responses\ApiResponse;
 use App\Models\Loan;
@@ -16,13 +18,15 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * The customer's loans: quote, apply, view, cancel. A customer has at most one
+ * The customer's loans: quote, apply, view, cancel, repay. A customer has at most one
  * open loan (PENDING, AWAITING_ADMIN or ACTIVE); applying locks the customer
  * row so two applications can't both pass that check. Another customer's loan
  * gets the same 404 as a missing one.
  */
 class LoanController extends CustomerAreaController
 {
+    use RecordsLoanPayments;
+
     public function types(): JsonResponse
     {
         return ApiResponse::success('Loan types.', LoanType::query()->orderBy('type_name')->get());
@@ -195,6 +199,56 @@ class LoanController extends CustomerAreaController
 
             return ApiResponse::success('Loan application cancelled.');
         });
+    }
+
+    /** The next instalment and the pay-everything-now amount, with the accounts the customer can pay from. */
+    public function repayment(Request $request, string $loanId): JsonResponse
+    {
+        $customerId = $this->customerId($request);
+        $loan = $this->ownLoan($customerId, $loanId);
+        if ($loan === null) {
+            return $this->notFound();
+        }
+
+        return $this->quoteResponse($loan, [
+            'accounts' => DB::table('account')
+                ->join('account_type', 'account_type.account_type_id', '=', 'account.account_type_id')
+                ->where('account.customer_id', $customerId)
+                ->where('account.status', 'ACTIVE')
+                ->orderBy('account.account_number')
+                ->get(['account.account_number', 'account_type.type_name', 'account.balance', 'account_type.minimum_balance', 'account.currency_code']),
+        ]);
+    }
+
+    /**
+     * Pays from one of the customer's accounts (channel ONLINE) after the
+     * password re-check. The route shares the transfer throttle.
+     */
+    public function pay(LoanPaymentRequest $request, string $loanId): JsonResponse
+    {
+        $loan = $this->ownLoan($this->customerId($request), $loanId);
+        if ($loan === null) {
+            return $this->notFound();
+        }
+
+        $this->confirmPassword($request, $request->validated('password'), 'LOAN_PAYMENT_PASSWORD_FAILED', [
+            'loan_id' => $loan->loan_id,
+            'payment_type' => $request->validated('payment_type'),
+            'amount' => $request->amount(),
+            'account_number' => $request->validated('account_number'),
+        ]);
+
+        $account = $this->findOwnAccount($request, $request->validated('account_number'));
+        if ($account === null) {
+            throw ValidationException::withMessages(['account_number' => 'Choose one of your own active accounts.']);
+        }
+
+        return $this->recordPayment($request, $loan, 'ONLINE', $account->account_id);
+    }
+
+    private function ownLoan(int $customerId, string $loanId): ?object
+    {
+        return DB::table('loan')->where('loan_id', $loanId)->where('customer_id', $customerId)->first();
     }
 
     /** @return array<string, mixed> */

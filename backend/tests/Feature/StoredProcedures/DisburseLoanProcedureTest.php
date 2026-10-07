@@ -2,7 +2,6 @@
 
 use App\Models\Branch;
 use App\Models\User;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -23,20 +22,6 @@ beforeEach(function () {
 function disburse(object $loan, array $schedule, User $by): object
 {
     return DB::select('CALL sp_disburse_loan(?, ?, ?)', [$loan->loan_id, json_encode($schedule), $by->user_id])[0];
-}
-
-function expectProcedureError(string $sqlState, string $message, callable $call): void
-{
-    try {
-        $call();
-    } catch (QueryException $e) {
-        expect((string) $e->getCode())->toBe($sqlState)
-            ->and($e->getMessage())->toContain($message);
-
-        return;
-    }
-
-    test()->fail("Expected SQLSTATE {$sqlState}: {$message}");
 }
 
 /** Nothing moved: balance, transactions, instalments and loan status are as before. */

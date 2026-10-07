@@ -102,6 +102,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::post('loans', [CustomerLoanController::class, 'store'])->name('loans.store');
                 Route::get('loans/{loanId}', [CustomerLoanController::class, 'show'])->whereNumber('loanId')->name('loans.show');
                 Route::post('loans/{loanId}/cancel', [CustomerLoanController::class, 'cancel'])->whereNumber('loanId')->name('loans.cancel');
+                Route::get('loans/{loanId}/repayment', [CustomerLoanController::class, 'repayment'])->whereNumber('loanId')->name('loans.repayment');
+                // Shares the transfer throttle: one budget of password attempts per user.
+                Route::post('loans/{loanId}/payments', [CustomerLoanController::class, 'pay'])->whereNumber('loanId')->middleware('throttle:customer-transfers')->name('loans.payments.store');
             });
 
             Route::prefix('staff')->name('staff.')->middleware('role:staff,admin')->group(function () {
@@ -136,7 +139,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                     Route::post('cards/{cardId}/reject', [StaffCardController::class, 'reject'])->whereNumber('cardId')->name('cards.reject');
                     Route::post('cards/{cardId}/unblock', [StaffCardController::class, 'unblock'])->whereNumber('cardId')->name('cards.unblock');
 
-                    // Loans at this branch: the four checks and the first approval. No money moves here.
+                    // Loans at this branch: the four checks, the first approval, and cash repayments (sp_repay_loan).
                     Route::get('loans', [StaffLoanController::class, 'index'])->name('loans.index');
                     Route::get('loans/{loanId}', [StaffLoanController::class, 'show'])->whereNumber('loanId')->name('loans.show');
                     Route::get('loans/{loanId}/statement', [StaffLoanController::class, 'statement'])->whereNumber('loanId')->name('loans.statement');
@@ -144,6 +147,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                         ->whereNumber('loanId')->whereIn('checkType', Loan::CHECKS)->name('loans.verifications.record');
                     Route::post('loans/{loanId}/approve', [StaffLoanController::class, 'approve'])->whereNumber('loanId')->name('loans.approve');
                     Route::post('loans/{loanId}/reject', [StaffLoanController::class, 'reject'])->whereNumber('loanId')->name('loans.reject');
+                    Route::get('loans/{loanId}/repayment', [StaffLoanController::class, 'repayment'])->whereNumber('loanId')->name('loans.repayment');
+                    Route::post('loans/{loanId}/payments', [StaffLoanController::class, 'pay'])->whereNumber('loanId')->name('loans.payments.store');
                 });
             });
         });

@@ -5,6 +5,7 @@ namespace App\Queries;
 use App\Models\Loan;
 use App\Support\Amortisation;
 use App\Support\InstalmentStatus;
+use App\Support\LoanRepayment;
 use App\Support\Tin;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Query\Builder;
@@ -16,7 +17,8 @@ use Illuminate\Support\Facades\DB;
  * Customers see their loan, its schedule and a rejection reason, never the
  * affordability figure, verification notes or approver names. Staff and admins
  * also see the application, guarantor, checks and affordability; lists mask
- * the TIN, and only the detail shows it in full.
+ * the TIN, and only the detail shows it in full. Every detail view lists the
+ * loan's payments; only staff and admins see who received a cash payment.
  */
 class LoanDirectory
 {
@@ -77,6 +79,7 @@ class LoanDirectory
             'cancelled_at' => $row->cancelled_at,
             'closed_at' => $row->closed_at,
             'can_cancel' => in_array($row->status, ['PENDING', 'AWAITING_ADMIN'], true),
+            'can_pay' => $row->status === 'ACTIVE',
         ];
     }
 
@@ -101,6 +104,7 @@ class LoanDirectory
         return [
             ...self::presentForCustomer($row),
             'schedule' => self::schedule($row->loan_id),
+            'payments' => self::payments($row->loan_id, forStaff: false),
         ];
     }
 
@@ -125,6 +129,7 @@ class LoanDirectory
             'rejection' => $person($row->rejected_by, $row->rejected_at),
             'disbursement_transaction_id' => $row->disbursement_transaction_id,
             'schedule' => self::schedule($row->loan_id),
+            'payments' => self::payments($row->loan_id, forStaff: true),
         ];
     }
 
@@ -162,9 +167,82 @@ class LoanDirectory
         $rows = DB::table('loan_instalment')
             ->where('loan_id', $loanId)
             ->orderBy('instalment_number')
-            ->get(['instalment_number', 'due_date', 'principal', 'interest', 'amount', 'balance_after', 'status', 'paid_at']);
+            ->get(['instalment_number', 'due_date', 'principal', 'interest', 'amount', 'balance_after', 'status',
+                'amount_paid', 'interest_waived', 'paid_at']);
 
         return InstalmentStatus::for($rows, now());
+    }
+
+    /**
+     * What paying now would cost: the next instalment and paying everything,
+     * from the backend only (LoanRepayment). $loan needs the loan columns
+     * LoanRepayment::quote() reads.
+     *
+     * @return array<string, mixed>
+     */
+    public static function repaymentQuote(object $loan): array
+    {
+        $rows = DB::table('loan_instalment')
+            ->where('loan_id', $loan->loan_id)
+            ->where('status', 'UNPAID')
+            ->orderBy('instalment_number')
+            ->get(['instalment_number', 'due_date', 'principal', 'interest', 'amount', 'status']);
+
+        return [
+            'loan_id' => $loan->loan_id,
+            'repayment_plan' => $loan->repayment_plan,
+            ...LoanRepayment::quote($loan, $rows),
+        ];
+    }
+
+    /**
+     * The loan's payments, newest first, with the instalments each one paid or settled.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function payments(int $loanId, bool $forStaff): array
+    {
+        $instalments = DB::table('loan_instalment')
+            ->where('loan_id', $loanId)
+            ->whereNotNull('loan_payment_id')
+            ->orderBy('instalment_number')
+            ->get(['loan_payment_id', 'instalment_number'])
+            ->groupBy('loan_payment_id');
+
+        return DB::table('loan_payment')
+            ->join('branch', 'branch.branch_id', '=', 'loan_payment.branch_id')
+            ->leftJoin('account', 'account.account_id', '=', 'loan_payment.account_id')
+            ->leftJoin('employee', 'employee.employee_id', '=', 'loan_payment.received_by')
+            ->where('loan_payment.loan_id', $loanId)
+            ->orderByDesc('loan_payment.payment_date')
+            ->orderByDesc('loan_payment.loan_payment_id')
+            ->get([
+                'loan_payment.loan_payment_id', 'loan_payment.payment_type', 'loan_payment.channel', 'loan_payment.payment_amount',
+                'loan_payment.principal_paid', 'loan_payment.interest_charged', 'loan_payment.interest_waived',
+                'loan_payment.remaining_balance', 'loan_payment.payment_date', 'loan_payment.status', 'loan_payment.transaction_id',
+                'account.account_number', 'branch.branch_name', 'employee.employee_id', 'employee.full_name',
+            ])
+            ->map(fn ($payment) => [
+                'loan_payment_id' => $payment->loan_payment_id,
+                'payment_type' => $payment->payment_type,
+                'channel' => $payment->channel,
+                'amount' => $payment->payment_amount,
+                'principal' => $payment->principal_paid,
+                'interest_charged' => $payment->interest_charged,
+                'interest_waived' => $payment->interest_waived,
+                'remaining_balance' => $payment->remaining_balance,
+                'payment_date' => $payment->payment_date,
+                'status' => $payment->status,
+                'account_number' => $payment->account_number,
+                'branch_name' => $payment->branch_name,
+                'instalments' => ($instalments[$payment->loan_payment_id] ?? collect())->pluck('instalment_number')->all(),
+                ...($forStaff ? [
+                    'transaction_id' => $payment->transaction_id,
+                    'received_by' => $payment->employee_id === null ? null
+                        : ['employee_id' => $payment->employee_id, 'name' => $payment->full_name],
+                ] : []),
+            ])
+            ->all();
     }
 
     /**

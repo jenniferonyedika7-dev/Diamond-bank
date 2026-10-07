@@ -29,7 +29,7 @@ Migrations live in `database/migrations/2026_10_03_0000NN_*`. They are numbered 
 | 14 | `card_type` | — | `type_name` UNIQUE |
 | 15 | `bank_card` | `account_id` → `account`, `card_type_id` → `card_type` | `card_number` UNIQUE |
 | 16 | `loan` | `customer_id` → `customer`, `branch_id` → `branch`, `approved_by` → `employee` (NULL) | `chk_loan_amount` (> 0) |
-| 17 | `loan_payment` | `loan_id` → `loan`, `branch_id` → `branch` | `chk_loan_payment_amount` (> 0) |
+| 17 | `loan_payment` | `loan_id` → `loan`, `branch_id` → `branch`, `transaction_id` → `transactions`* (NULL, UNIQUE), `account_id` → `account`* (NULL), `paid_by` → `users`* (NULL), `received_by` → `employee`* (NULL) | `chk_loan_payment_amount` (> 0), `chk_loan_payment_parts`, `chk_loan_payment_waiver`, `chk_loan_payment_channel`, index (`loan_id`, `payment_date`) |
 | 18 | `role` | — | `role_name` UNIQUE (customer, staff, admin) |
 | 19 | `users` | `role_id` → `role`, `customer_id` → `customer`* (NULL, UNIQUE), `employee_id` → `employee`* (NULL, UNIQUE) | `user_name` UNIQUE, `chk_users_one_owner` |
 | 20 | `audit_log` | `user_id` → `users` (NULL) | index (`table_affected`, `record_id`) |
@@ -37,11 +37,11 @@ Migrations live in `database/migrations/2026_10_03_0000NN_*`. They are numbered 
 | 22 | `loan_application` | `loan_id` → `loan` (PK, 1:1) | `chk_loan_application_income` (> 0) |
 | 23 | `loan_guarantor` | `loan_id` → `loan` (UNIQUE: one per loan) | |
 | 24 | `loan_verification` | `loan_id` → `loan`, `verified_by` → `employee` | UNIQUE (`loan_id`, `check_type`) |
-| 25 | `loan_instalment` | `loan_id` → `loan`, `loan_payment_id` → `loan_payment` (NULL) | UNIQUE (`loan_id`, `instalment_number`), `chk_loan_instalment_amounts` |
+| 25 | `loan_instalment` | `loan_id` → `loan`, `loan_payment_id` → `loan_payment` (NULL) | UNIQUE (`loan_id`, `instalment_number`), `chk_loan_instalment_amounts`, `chk_loan_instalment_payment` |
 
-Tables 21–25 and the extra `loan` columns come from `2026_10_06_000001_create_loan_tables.php` (Phase F2a). It only runs while `loan` is empty.
+Tables 21–25 and the extra `loan` columns come from `2026_10_06_000001_create_loan_tables.php` (Phase F2a). It only runs while `loan` is empty. The extra `loan_payment` and `loan_instalment` payment columns come from `2026_10_08_000001_extend_loan_payment_for_repayments.php` (Phase F2b). It only runs while `loan_payment` is empty and every instalment is UNPAID.
 
-\* These four foreign keys are `ON UPDATE RESTRICT`. MySQL rejects a CHECK constraint on a column that is used by a cascading foreign key action (error 3823), and these columns appear in CHECKs. The primary keys they point to are auto-increment ids that never change, so nothing is lost.
+\* These foreign keys are `ON UPDATE RESTRICT` (four from the original schema, four on `loan_payment` from Phase F2b). MySQL rejects a CHECK constraint on a column that is used by a cascading foreign key action (error 3823), and these columns appear in CHECKs. The primary keys they point to are auto-increment ids that never change, so nothing is lost.
 
 ## Columns added beyond the original ERD
 
@@ -55,6 +55,9 @@ Tables 21–25 and the extra `loan` columns come from `2026_10_06_000001_create_
 | `loan.loan_type_id`, `account_id`, `repayment_plan`, `monthly_instalment`, `total_interest`, `total_repayable` | The loan type (its rate is copied to `interest_rate`), the disbursement account, and the quote the customer accepted. `monthly_instalment` is NULL for a SINGLE (one payment) loan. `branch_id` is the disbursement account's branch, which decides which staff see the loan. |
 | `loan.staff_approved_by`, `staff_approved_at` | Maker-checker: staff make the first approval (PENDING → AWAITING_ADMIN). `approved_by` / `approval_date` record the admin's final approval, which is also the disbursement. |
 | `loan.rejected_by`, `rejected_at`, `rejection_reason`, `cancelled_at`, `disbursement_transaction_id`, `closed_at` | Who decided what and when; the LOAN_DISBURSEMENT transaction. Loan status is PENDING, AWAITING_ADMIN, REJECTED, CANCELLED, ACTIVE or CLOSED (APPROVED was dropped: approval and disbursement are one step). |
+| `loan_payment.payment_type`, `channel`, `principal_paid`, `interest_charged`, `interest_waived` | What a payment was: INSTALMENT (the oldest UNPAID instalment) or EARLY_PAYOFF (everything left, with interest only for the months that have started), ONLINE or BRANCH (cash), and how much of it was principal and interest. `interest_waived` is the scheduled interest not charged on an early payoff. |
+| `loan_payment.transaction_id`, `account_id`, `paid_by`, `received_by` | ONLINE: the LOAN_PAYMENT transaction, the account it came from and the customer's login. BRANCH (cash): the employee who received it, and no transaction or account, because every `transactions` row belongs to an account. `chk_loan_payment_channel` enforces this. `remaining_balance` is the sum of the loan's UNPAID instalments after the payment. |
+| `loan_instalment.amount_paid`, `interest_waived` | Set when an instalment is PAID (in full) or SETTLED (by an early payoff, possibly with its interest waived); `loan_payment_id` and `paid_at` link it to the payment. |
 
 ## Stored procedures (migration 21)
 
@@ -62,6 +65,8 @@ Tables 21–25 and the extra `loan` columns come from `2026_10_06_000001_create_
 - `sp_transfer_funds(from_account_id, to_account_number, amount, description, channel, performed_by)` returns `transfer_id, balance_after, amount`.
 
 - `sp_disburse_loan(loan_id, schedule_json, performed_by)` (migration `2026_10_06_000002`) returns `loan_id, transaction_id, account_number, amount, balance_after`. Admin only; the loan must be AWAITING_ADMIN and approved by a different employee. The schedule is built in PHP (`App\Support\Amortisation`) and checked row by row by the procedure before it credits the account, writes the instalments and activates the loan.
+
+- `sp_repay_loan(loan_id, payment_type, channel, account_id, expected_instalment, expected_amount, performed_by)` (migration `2026_10_08_000002`) returns `loan_payment_id, payment_type, channel, amount, principal, interest_charged, interest_waived, transaction_id, account_number, balance_after, remaining_balance, loan_status`. ONLINE: the customer, from their own ACTIVE account (minimum balance applies). BRANCH: staff or an admin whose current branch is the loan's branch, with `account_id` NULL. It locks the loan, then the account, then the UNPAID instalments, works the amount out itself (the same rules as `App\Support\LoanRepayment`, which quotes it) and answers SQLSTATE `45001` if the caller's amount or instalment number no longer matches, or the loan is not ACTIVE. The loan becomes CLOSED when no instalment is UNPAID.
 
 Notes:
 
