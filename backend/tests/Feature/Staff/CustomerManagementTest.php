@@ -33,7 +33,7 @@ it('lists customers by KYC status and searches by username', function () {
 });
 
 it('verifies a pending customer, recording who and when', function () {
-    $customer = customerWithLogin();
+    $customer = customerWithLogin('PENDING', currentBranchId($this->staff));
 
     $this->postJson("/api/v1/staff/customers/{$customer->customer_id}/verify")
         ->assertOk()
@@ -57,7 +57,7 @@ it('verifies a pending customer, recording who and when', function () {
 });
 
 it('needs a reason to reject KYC, and audits it', function () {
-    $customer = customerWithLogin();
+    $customer = customerWithLogin('PENDING', currentBranchId($this->staff));
 
     $this->postJson("/api/v1/staff/customers/{$customer->customer_id}/reject-kyc", [])
         ->assertUnprocessable()
@@ -75,7 +75,7 @@ it('needs a reason to reject KYC, and audits it', function () {
 });
 
 it('edits a customer with audit, and locks the national ID after KYC', function () {
-    $customer = customerWithLogin();
+    $customer = customerWithLogin('PENDING', currentBranchId($this->staff));
     $payload = fn (array $overrides = []) => array_merge([
         'first_name' => $customer->first_name, 'last_name' => $customer->last_name,
         'date_of_birth' => '1990-02-03', 'gender' => 'F', 'national_id' => $customer->national_id,
@@ -103,7 +103,7 @@ it('edits a customer with audit, and locks the national ID after KYC', function 
 });
 
 it('blocks a customer login, ending their sessions, and unblocks it', function () {
-    $customer = customerWithLogin('VERIFIED');
+    $customer = customerWithLogin('VERIFIED', currentBranchId($this->staff));
     $user = $customer->user;
     DB::table('sessions')->insert([
         'id' => 'cust-session', 'user_id' => $user->user_id, 'ip_address' => '127.0.0.1',
@@ -149,7 +149,7 @@ it('returns a friendly 404 for an unknown customer', function () {
 });
 
 it('refuses a customer without a login', function () {
-    $customer = Customer::factory()->create();
+    $customer = Customer::factory()->create(['branch_id' => currentBranchId($this->staff)]);
 
     $this->postJson("/api/v1/staff/customers/{$customer->customer_id}/block", ['reason' => 'x'])
         ->assertStatus(409)

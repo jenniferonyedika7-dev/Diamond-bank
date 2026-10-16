@@ -4,23 +4,19 @@ namespace App\Http\Requests\Auth;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Str;
 
 /**
- * Two failed-login limiters, both checked before the password:
- *  - lower(user_name)|ip: 5 failures per minute (one client hammering one account)
- *  - lower(user_name):    20 failures per hour across all IPs (distributed guessing)
- * Hitting either returns the same 429. The account itself is never locked or blocked.
+ * The per-IP failed-login limit: 30 failures a minute from one IP, whatever
+ * the user_name (password spraying, and guessing at unknown user_names).
+ * Checked before the password; the 429 says how long to wait. Wrong passwords
+ * for a known, ACTIVE login are also counted per user by PasswordLockout
+ * (AuthController::login), shared with the in-app password re-checks.
  */
 class LoginRequest extends FormRequest
 {
-    public const PER_IP_MAX_ATTEMPTS = 5;
+    public const PER_IP_ANY_USER_MAX_ATTEMPTS = 30;
 
-    public const PER_IP_DECAY_SECONDS = 60;
-
-    public const PER_USER_MAX_ATTEMPTS = 20;
-
-    public const PER_USER_DECAY_SECONDS = 3600;
+    public const PER_IP_ANY_USER_DECAY_SECONDS = 60;
 
     public function rules(): array
     {
@@ -30,49 +26,22 @@ class LoginRequest extends FormRequest
         ];
     }
 
-    /** Seconds until the caller may try again, or null if neither limiter is tripped. */
+    /** Seconds until this IP may try again, or null if it isn't limited. */
     public function throttledFor(): ?int
     {
-        $waits = [];
-
-        if (RateLimiter::tooManyAttempts($this->perIpKey(), self::PER_IP_MAX_ATTEMPTS)) {
-            $waits[] = RateLimiter::availableIn($this->perIpKey());
-        }
-
-        if (RateLimiter::tooManyAttempts($this->perUserKey(), self::PER_USER_MAX_ATTEMPTS)) {
-            $waits[] = RateLimiter::availableIn($this->perUserKey());
-        }
-
-        return $waits === [] ? null : max(1, ...$waits);
+        return RateLimiter::tooManyAttempts($this->perIpKey(), self::PER_IP_ANY_USER_MAX_ATTEMPTS)
+            ? max(1, RateLimiter::availableIn($this->perIpKey()))
+            : null;
     }
 
+    /** Never cleared on a success: one correct password doesn't reset a spraying IP's count. */
     public function recordFailedAttempt(): void
     {
-        RateLimiter::hit($this->perIpKey(), self::PER_IP_DECAY_SECONDS);
-        RateLimiter::hit($this->perUserKey(), self::PER_USER_DECAY_SECONDS);
-    }
-
-    /**
-     * Called on success. Only the per-IP counter is cleared: failures from other
-     * IPs still count toward the hourly per-user limit.
-     */
-    public function clearIpThrottle(): void
-    {
-        RateLimiter::clear($this->perIpKey());
+        RateLimiter::hit($this->perIpKey(), self::PER_IP_ANY_USER_DECAY_SECONDS);
     }
 
     private function perIpKey(): string
     {
-        return 'login:'.$this->normalizedUserName().'|'.$this->ip();
-    }
-
-    private function perUserKey(): string
-    {
-        return 'login-user:'.$this->normalizedUserName();
-    }
-
-    private function normalizedUserName(): string
-    {
-        return Str::lower(trim((string) $this->input('user_name')));
+        return 'login-ip:'.$this->ip();
     }
 }

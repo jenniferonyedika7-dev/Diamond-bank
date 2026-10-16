@@ -160,7 +160,7 @@ it('refuses invalid amounts', function (mixed $amount, string $message) {
     'too large' => ['100000000.00', 'The amount can be at most 99,999,999.99.'],
 ]);
 
-it('rate-limits lookups to 10 and transfers to 5 per minute per user', function () {
+it('rate-limits lookups to 10 per minute per user, and locks transfers after 5 wrong passwords', function () {
     foreach (range(1, 10) as $i) {
         $this->postJson('/api/v1/customer/transfers/lookup', ['to_account_number' => 'DB0019999999'])->assertUnprocessable();
     }
@@ -169,12 +169,15 @@ it('rate-limits lookups to 10 and transfers to 5 per minute per user', function 
         ->assertHeader('Retry-After')
         ->assertJsonPath('success', false);
 
-    foreach (range(1, 5) as $i) {
+    foreach (range(1, 4) as $i) {
         $this->postJson('/api/v1/customer/transfers', transferPayload($this->from, $this->to, ['password' => 'nope']))->assertUnprocessable();
     }
+    $this->postJson('/api/v1/customer/transfers', transferPayload($this->from, $this->to, ['password' => 'nope']))
+        ->assertStatus(429)
+        ->assertJsonPath('message', 'Too many wrong passwords. Try again in 1 minute.');
     $this->postJson('/api/v1/customer/transfers', transferPayload($this->from, $this->to))
         ->assertStatus(429)
-        ->assertJsonPath('message', fn (string $m) => str_starts_with($m, 'Too many attempts. Try again in '));
+        ->assertHeader('Retry-After');
 
     assertNothingMoved($this->from, $this->to);
 });

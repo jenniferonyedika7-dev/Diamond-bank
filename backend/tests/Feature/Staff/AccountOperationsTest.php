@@ -87,6 +87,38 @@ it('rejects amounts with more than 2 decimals', function () {
         ->assertJsonPath('message', 'Amounts can have at most 2 decimal places.');
 });
 
+it('refuses zero, negative and non-numeric cash amounts, moving nothing', function (string $action, mixed $amount, ?string $message) {
+    $number = openAccountFor(customerWithLogin('VERIFIED', currentBranchId($this->staff)), '500.00');
+    $transactionsBefore = DB::table('transactions')->count();
+
+    $response = $this->postJson("/api/v1/staff/accounts/{$number}/{$action}", ['amount' => $amount])->assertUnprocessable();
+    $message === null
+        ? $response->assertJsonValidationErrors('amount')
+        : $response->assertJsonPath('message', $message);
+
+    expect(Account::firstWhere('account_number', $number)->balance)->toBe('500.00')
+        ->and(DB::table('transactions')->count())->toBe($transactionsBefore);
+})->with([
+    'zero deposit' => ['deposit', '0', 'The deposit amount must be greater than zero.'],
+    'negative deposit' => ['deposit', '-50.00', 'The deposit amount must be greater than zero.'],
+    'zero withdrawal' => ['withdraw', '0.00', 'The withdrawal amount must be greater than zero.'],
+    'negative withdrawal' => ['withdraw', '-50', 'The withdrawal amount must be greater than zero.'],
+    'text deposit' => ['deposit', 'fifty', null],
+    'array withdrawal' => ['withdraw', ['50'], null],
+]);
+
+it('refuses a negative initial deposit, opening nothing', function () {
+    $customer = customerWithLogin('VERIFIED');
+
+    $this->postJson('/api/v1/staff/accounts', [
+        'customer_id' => $customer->customer_id,
+        'account_type_id' => savingsType()->account_type_id,
+        'initial_deposit' => '-1.00',
+    ])->assertUnprocessable()->assertJsonPath('message', 'The initial deposit cannot be negative.');
+
+    expect(Account::where('customer_id', $customer->customer_id)->count())->toBe(0);
+});
+
 it('freezes an account: no deposits or transfers out until unfrozen', function () {
     $customer = customerWithLogin('VERIFIED');
     $number = openAccountFor($customer, '500.00');

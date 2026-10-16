@@ -13,6 +13,7 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const flash = location.state?.flash
+  const notice = location.state?.notice
 
   const [form, setForm] = useState({ user_name: '', password: '' })
   const [submitting, setSubmitting] = useState(false)
@@ -58,6 +59,7 @@ export default function LoginPage() {
     <AuthLayout title="Sign in" subtitle="Welcome back. Sign in to your Diamond Bank account.">
       <form onSubmit={handleSubmit} noValidate className="space-y-5">
         {flash && !error && <Alert tone="success">{flash}</Alert>}
+        {notice && !error && <Alert>{notice}</Alert>}
         <Alert>{error}</Alert>
         {retryIn > 0 && (
           <p className="text-sm text-slate-600" aria-live="polite">

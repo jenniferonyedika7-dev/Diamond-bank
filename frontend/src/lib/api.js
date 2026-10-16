@@ -51,6 +51,9 @@ api.interceptors.response.use(
     if (response.status === 403) {
       if (response.data?.data?.must_change_password === true) {
         handlers.onMustChangePassword()
+      } else if (response.data?.data?.account_locked === true) {
+        // Blocked after too many wrong passwords; the backend has ended every session.
+        handlers.onUnauthenticated(response.data.message)
       } else if (response.data?.message === 'Your account is not active.') {
         // Blocked mid-session; the backend has already logged the user out.
         handlers.onUnauthenticated()

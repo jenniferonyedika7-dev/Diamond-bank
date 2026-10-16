@@ -26,10 +26,10 @@ function currentBranchId(User $staff): int
     return DB::table('employee_branch_lnk')->where('employee_id', $staff->employee_id)->whereNull('end_date')->value('branch_id');
 }
 
-/** A customer with an ACTIVE login. */
-function customerWithLogin(string $kycStatus = 'PENDING'): Customer
+/** A customer with an ACTIVE login, at $branchId (or a new branch). */
+function customerWithLogin(string $kycStatus = 'PENDING', ?int $branchId = null): Customer
 {
-    $customer = Customer::factory()->create(['kyc_status' => $kycStatus]);
+    $customer = Customer::factory()->create(['kyc_status' => $kycStatus, ...($branchId ? ['branch_id' => $branchId] : [])]);
     User::factory()->create(['customer_id' => $customer->customer_id]);
 
     return $customer;

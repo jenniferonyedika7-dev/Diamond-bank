@@ -10,7 +10,8 @@ class ChangePasswordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'current_password' => ['required', 'string', 'current_password:web'],
+            // Checked against the stored password by AuthController::changePassword, which counts wrong ones (PasswordLockout).
+            'current_password' => ['required', 'string'],
             'password' => ['required', 'string', 'confirmed', Password::defaults(), 'different:current_password'],
         ];
     }

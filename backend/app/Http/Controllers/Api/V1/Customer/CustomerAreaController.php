@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Responses\ApiResponse;
 use App\Models\Account;
 use App\Services\AuditLogger;
+use App\Services\PasswordLockout;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -18,7 +19,7 @@ use Illuminate\Validation\ValidationException;
  */
 abstract class CustomerAreaController extends Controller
 {
-    public function __construct(protected AuditLogger $audit) {}
+    public function __construct(protected AuditLogger $audit, protected PasswordLockout $lockout) {}
 
     protected function customerId(Request $request): int
     {
@@ -49,9 +50,11 @@ abstract class CustomerAreaController extends Controller
 
     /**
      * Re-checks the customer's password before a sensitive action (a transfer,
-     * revealing a card number). A wrong password writes $failedAction to the
-     * audit log with $details (never the password) and fails with a 422 on
-     * the password field. The calling route carries the throttle.
+     * revealing a card number, a loan payment). A wrong password writes
+     * $failedAction to the audit log with $details (never the password), counts
+     * toward PasswordLockout (which may answer 429 or block the login instead),
+     * and fails with a 422 on the password field. The calling route carries
+     * the password.lockout middleware.
      *
      * @param  array<string, mixed>  $details
      */
@@ -59,10 +62,15 @@ abstract class CustomerAreaController extends Controller
     {
         $user = $request->user();
 
-        if (! Hash::check($password, $user->password)) {
-            $this->audit->log($failedAction, 'users', $user->user_id, $details);
+        if (Hash::check($password, $user->password)) {
+            $this->lockout->cleared($user);
 
-            throw ValidationException::withMessages(['password' => 'The password is incorrect.']);
+            return;
         }
+
+        $this->audit->log($failedAction, 'users', $user->user_id, $details);
+        $this->lockout->recordFailure($user);
+
+        throw ValidationException::withMessages(['password' => 'The password is incorrect.']);
     }
 }

@@ -106,53 +106,40 @@ it('gives the same generic message for a wrong password and an unknown user, and
         ->and($rows->pluck('details')->implode(' '))->not->toContain('wrong-pass1');
 });
 
-it('throttles the 6th failed login in a minute for the same user_name and IP', function () {
+it('locks a login after 5 wrong passwords, whatever the IP or the case of the user_name', function () {
     User::factory()->create(['user_name' => 'target']);
 
-    foreach (range(1, 5) as $i) {
-        login('target', "wrong{$i}x")->assertUnauthorized();
+    // Spread over IPs: the count is per user, not per IP.
+    foreach (range(1, 4) as $i) {
+        login('target', "wrong{$i}x", "10.0.0.{$i}")->assertUnauthorized();
     }
+    login('target', 'wrong5x', '10.0.0.5')->assertTooManyRequests();
 
-    // Even the correct password is refused while throttled; case doesn't dodge the key.
-    login('TARGET', 'password1')
+    // Even the correct password is refused while locked; case doesn't dodge it.
+    login('TARGET', 'password1', '10.9.9.9')
         ->assertTooManyRequests()
         ->assertHeader('Retry-After')
-        ->assertJson(['success' => false, 'data' => null])
-        ->assertJsonPath('message', fn ($m) => str_starts_with($m, 'Too many login attempts. Try again in '));
-
-    // A different IP is not affected by the per-IP limit.
-    login('target', 'password1', '10.9.9.9')->assertOk();
+        ->assertJson(['success' => false, 'data' => null, 'message' => 'Too many wrong passwords. Try again in 1 minute.']);
 });
 
-it('throttles a user_name after 20 failed logins in an hour across many IPs, without locking the account', function () {
-    $user = User::factory()->create(['user_name' => 'victim']);
+it('throttles one IP after 30 failed logins in a minute across different user_names (password spraying)', function () {
+    User::factory()->create(['user_name' => 'real']);
 
-    // 20 failures spread over 5 IPs, 4 each: the per-IP limit (5/min) never trips.
-    foreach (range(1, 5) as $ipSuffix) {
-        foreach (range(1, 4) as $attempt) {
-            login('Victim', "wrong{$attempt}x", "10.0.0.{$ipSuffix}")->assertUnauthorized();
-        }
+    // One guess per user_name, so neither per-user_name limit ever trips.
+    foreach (range(1, LoginRequest::PER_IP_ANY_USER_MAX_ATTEMPTS) as $i) {
+        login("sprayed{$i}", 'Summer2026', '10.7.7.7')->assertUnauthorized();
     }
 
-    // A fresh IP, with the correct password, is refused with the same 429 message.
-    $response = login('victim', 'password1', '10.0.0.99')
+    login('real', 'password1', '10.7.7.7')
         ->assertTooManyRequests()
         ->assertHeader('Retry-After')
-        ->assertJson(['success' => false, 'data' => null]);
+        ->assertJsonPath('message', fn ($m) => str_starts_with($m, 'Too many login attempts. Try again in '));
 
-    expect($response->json('message'))->toMatch('/^Too many login attempts\. Try again in \d+ seconds\.$/');
-    expect((int) $response->headers->get('Retry-After'))
-        ->toBeGreaterThan(LoginRequest::PER_IP_DECAY_SECONDS)
-        ->toBeLessThanOrEqual(LoginRequest::PER_USER_DECAY_SECONDS);
-
-    // The account itself is untouched, and other user_names are unaffected.
-    expect($user->fresh()->status)->toBe('ACTIVE');
-    User::factory()->create(['user_name' => 'bystander']);
-    login('bystander', 'password1', '10.0.0.1')->assertOk();
-
-    // Once the hour has passed, the real user can log in again.
-    $this->travel(LoginRequest::PER_USER_DECAY_SECONDS + 1)->seconds();
-    login('victim', 'password1', '10.0.0.99')->assertOk();
+    // Other IPs are unaffected, and the limit lifts after a minute.
+    login('real', 'password1', '10.7.7.8')->assertOk();
+    Auth::forgetGuards();
+    $this->travel(LoginRequest::PER_IP_ANY_USER_DECAY_SECONDS + 1)->seconds();
+    login('real', 'password1', '10.7.7.7')->assertOk();
 });
 
 it('blocks an admin who must change their password from /me until they change it', function () {

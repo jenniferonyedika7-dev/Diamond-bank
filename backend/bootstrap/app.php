@@ -2,6 +2,7 @@
 
 use App\Exceptions\ProcedureFailed;
 use App\Http\Middleware\EnsurePasswordChanged;
+use App\Http\Middleware\EnsurePasswordNotLocked;
 use App\Http\Middleware\EnsureStaffHasBranch;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\EnsureUserIsActive;
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => EnsureUserIsActive::class,
             'password.changed' => EnsurePasswordChanged::class,
             'staff.branch' => EnsureStaffHasBranch::class,
+            'password.lockout' => EnsurePasswordNotLocked::class,
         ]);
 
         // Check status, password, role and branch before route-model binding, so

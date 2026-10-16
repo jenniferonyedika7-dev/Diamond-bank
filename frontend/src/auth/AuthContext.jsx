@@ -30,6 +30,15 @@ export function AuthProvider({ children }) {
   const [state, setState] = useState({ status: 'loading', user: null })
 
   const setGuest = useCallback(() => setState({ status: 'guest', user: null }), [])
+
+  // Logged out by the server. With a message (e.g. locked after wrong passwords), show it on the login page.
+  const handleUnauthenticated = useCallback(
+    (message) => {
+      if (message) navigate('/login', { replace: true, state: { notice: message } })
+      setGuest()
+    },
+    [navigate, setGuest],
+  )
   const setUser = useCallback((user) => setState({ status: 'authenticated', user }), [])
 
   // /auth/me sits behind the password.changed middleware, so a user who must
@@ -50,11 +59,11 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     setAuthHandlers({
-      onUnauthenticated: setGuest,
+      onUnauthenticated: handleUnauthenticated,
       onMustChangePassword: markMustChangePassword,
     })
     loadMe().then((next) => next && setState(next))
-  }, [markMustChangePassword, setGuest])
+  }, [markMustChangePassword, handleUnauthenticated])
 
   const login = useCallback(
     async (userName, password) => {

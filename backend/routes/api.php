@@ -34,14 +34,14 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->name('api.v1.')->group(function () {
     // Public
     Route::get('branches', [BranchController::class, 'index'])->name('branches.index');
-    Route::post('auth/register/customer', [RegisterController::class, 'customer'])->name('auth.register.customer');
-    Route::post('auth/register/staff', [RegisterController::class, 'staff'])->name('auth.register.staff');
+    Route::post('auth/register/customer', [RegisterController::class, 'customer'])->middleware('throttle:registrations')->name('auth.register.customer');
+    Route::post('auth/register/staff', [RegisterController::class, 'staff'])->middleware('throttle:registrations')->name('auth.register.staff');
     Route::post('auth/login', [AuthController::class, 'login'])->name('auth.login'); // throttled in LoginRequest
 
     Route::middleware(['auth:sanctum', 'active'])->group(function () {
         // Reachable while must_change_password is set.
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
-        Route::post('auth/change-password', [AuthController::class, 'changePassword'])->name('auth.change-password');
+        Route::post('auth/change-password', [AuthController::class, 'changePassword'])->middleware(['throttle:password-actions', 'password.lockout'])->name('auth.change-password');
 
         Route::middleware('password.changed')->group(function () {
             Route::get('auth/me', [AuthController::class, 'me'])->name('auth.me');
@@ -88,13 +88,13 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::get('accounts/{accountNumber}', [CustomerAccountController::class, 'show'])->name('accounts.show');
                 Route::get('accounts/{accountNumber}/transactions', [CustomerAccountController::class, 'transactions'])->name('accounts.transactions');
                 Route::post('transfers/lookup', [TransferController::class, 'lookup'])->middleware('throttle:customer-lookup')->name('transfers.lookup');
-                Route::post('transfers', [TransferController::class, 'store'])->middleware('throttle:customer-transfers')->name('transfers.store');
+                Route::post('transfers', [TransferController::class, 'store'])->middleware(['throttle:password-actions', 'password.lockout'])->name('transfers.store');
                 Route::get('card-types', [CustomerCardController::class, 'types'])->name('card-types.index');
                 Route::get('cards', [CustomerCardController::class, 'index'])->name('cards.index');
                 Route::post('cards', [CustomerCardController::class, 'store'])->name('cards.store');
                 Route::post('cards/{cardId}/block', [CustomerCardController::class, 'block'])->whereNumber('cardId')->name('cards.block');
-                // Shares the transfer throttle: one budget of password attempts per user.
-                Route::post('cards/{cardId}/reveal', [CustomerCardController::class, 'reveal'])->whereNumber('cardId')->middleware('throttle:customer-transfers')->name('cards.reveal');
+                // Password re-check: wrong passwords share one lockout count per user (PasswordLockout).
+                Route::post('cards/{cardId}/reveal', [CustomerCardController::class, 'reveal'])->whereNumber('cardId')->middleware(['throttle:password-actions', 'password.lockout'])->name('cards.reveal');
                 Route::get('loan-types', [CustomerLoanController::class, 'types'])->name('loan-types.index');
                 Route::get('loans/apply-context', [CustomerLoanController::class, 'applyContext'])->name('loans.apply-context');
                 Route::post('loans/quote', [CustomerLoanController::class, 'quote'])->middleware('throttle:customer-loan-quote')->name('loans.quote');
@@ -103,26 +103,28 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::get('loans/{loanId}', [CustomerLoanController::class, 'show'])->whereNumber('loanId')->name('loans.show');
                 Route::post('loans/{loanId}/cancel', [CustomerLoanController::class, 'cancel'])->whereNumber('loanId')->name('loans.cancel');
                 Route::get('loans/{loanId}/repayment', [CustomerLoanController::class, 'repayment'])->whereNumber('loanId')->name('loans.repayment');
-                // Shares the transfer throttle: one budget of password attempts per user.
-                Route::post('loans/{loanId}/payments', [CustomerLoanController::class, 'pay'])->whereNumber('loanId')->middleware('throttle:customer-transfers')->name('loans.payments.store');
+                // Password re-check: wrong passwords share one lockout count per user (PasswordLockout).
+                Route::post('loans/{loanId}/payments', [CustomerLoanController::class, 'pay'])->whereNumber('loanId')->middleware(['throttle:password-actions', 'password.lockout'])->name('loans.payments.store');
             });
 
             Route::prefix('staff')->name('staff.')->middleware('role:staff,admin')->group(function () {
                 // Read-only; an admin without a branch may use it too (the admin area links here).
                 Route::get('audit-log', [AuditLogController::class, 'index'])->middleware('staff.branch:admin-optional')->name('audit-log');
 
-                // Everything else happens at the staff member's current branch.
+                // Everything else needs a current branch. Changing a customer (KYC, details, login)
+                // or freezing an account is limited to their own branch (CustomerPolicy, AccountPolicy);
+                // viewing them and cash deposits and withdrawals are open at every branch.
                 Route::middleware('staff.branch')->group(function () {
                     Route::get('me/branch', [MeController::class, 'branch'])->name('me.branch');
                     Route::get('overview', StaffOverviewController::class)->name('overview');
 
                     Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
                     Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
-                    Route::put('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
-                    Route::post('customers/{customer}/verify', [CustomerController::class, 'verify'])->name('customers.verify');
-                    Route::post('customers/{customer}/reject-kyc', [CustomerController::class, 'rejectKyc'])->name('customers.reject-kyc');
-                    Route::post('customers/{customer}/block', [CustomerController::class, 'block'])->name('customers.block');
-                    Route::post('customers/{customer}/unblock', [CustomerController::class, 'unblock'])->name('customers.unblock');
+                    Route::put('customers/{customer}', [CustomerController::class, 'update'])->can('manage', 'customer')->name('customers.update');
+                    Route::post('customers/{customer}/verify', [CustomerController::class, 'verify'])->can('manage', 'customer')->name('customers.verify');
+                    Route::post('customers/{customer}/reject-kyc', [CustomerController::class, 'rejectKyc'])->can('manage', 'customer')->name('customers.reject-kyc');
+                    Route::post('customers/{customer}/block', [CustomerController::class, 'block'])->can('manage', 'customer')->name('customers.block');
+                    Route::post('customers/{customer}/unblock', [CustomerController::class, 'unblock'])->can('manage', 'customer')->name('customers.unblock');
 
                     Route::get('account-types', [AccountController::class, 'types'])->name('account-types.index');
                     Route::post('accounts', [AccountController::class, 'store'])->name('accounts.store');
@@ -130,8 +132,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                     Route::get('accounts/{account}/transactions', [AccountController::class, 'transactions'])->name('accounts.transactions');
                     Route::post('accounts/{account}/deposit', [AccountController::class, 'deposit'])->name('accounts.deposit');
                     Route::post('accounts/{account}/withdraw', [AccountController::class, 'withdraw'])->name('accounts.withdraw');
-                    Route::post('accounts/{account}/freeze', [AccountController::class, 'freeze'])->name('accounts.freeze');
-                    Route::post('accounts/{account}/unfreeze', [AccountController::class, 'unfreeze'])->name('accounts.unfreeze');
+                    Route::post('accounts/{account}/freeze', [AccountController::class, 'freeze'])->can('manage', 'account')->name('accounts.freeze');
+                    Route::post('accounts/{account}/unfreeze', [AccountController::class, 'unfreeze'])->can('manage', 'account')->name('accounts.unfreeze');
 
                     // Cards on accounts held at this branch.
                     Route::get('cards', [StaffCardController::class, 'index'])->name('cards.index');

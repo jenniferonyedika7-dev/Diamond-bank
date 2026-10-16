@@ -169,13 +169,16 @@ it('offers a SINGLE loan only the pay-everything option', function () {
         ->assertJsonPath('message', 'This loan is repaid in one payment. Choose to pay everything now.');
 });
 
-it('shares one budget of password attempts with transfers and card reveals', function () {
+it('shares one count of wrong passwords with transfers and card reveals', function () {
+    $other = accountFor(bankCustomer(), '100.00');
     foreach (range(1, 3) as $i) {
-        $this->postJson('/api/v1/customer/transfers', [])->assertUnprocessable();
+        $this->postJson('/api/v1/customer/transfers', [
+            'from_account_number' => $this->account->account_number, 'to_account_number' => $other->account_number,
+            'amount' => '10.00', 'password' => 'wrong',
+        ])->assertUnprocessable();
     }
-    foreach (range(1, 2) as $i) {
-        payLoan($this->loan, ['password' => 'wrong'])->assertUnprocessable();
-    }
+    payLoan($this->loan, ['password' => 'wrong'])->assertUnprocessable();
+    payLoan($this->loan, ['password' => 'wrong'])->assertStatus(429);
 
     payLoan($this->loan)->assertStatus(429)->assertHeader('Retry-After');
     $this->postJson('/api/v1/customer/transfers', [])->assertStatus(429);

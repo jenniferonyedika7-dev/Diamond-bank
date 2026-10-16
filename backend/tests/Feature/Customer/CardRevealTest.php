@@ -105,20 +105,27 @@ it('refuses the reveal route to staff and admins', function (string $role) {
     $this->assertDatabaseMissing('audit_log', ['action_type' => 'CARD_NUMBER_REVEALED']);
 })->with(['staff', 'admin']);
 
-it('limits reveals to 5 attempts per minute', function () {
-    foreach (range(1, 5) as $i) {
+it('locks reveals after 5 wrong passwords, even for the right one', function () {
+    foreach (range(1, 4) as $i) {
         reveal($this->card, 'nope')->assertUnprocessable();
     }
+    reveal($this->card, 'nope')->assertStatus(429);
 
     reveal($this->card)
         ->assertStatus(429)
         ->assertHeader('Retry-After')
-        ->assertJsonPath('message', fn (string $m) => str_starts_with($m, 'Too many attempts. Try again in '));
+        ->assertJsonPath('message', 'Too many wrong passwords. Try again in 1 minute.');
 
     $this->assertDatabaseMissing('audit_log', ['action_type' => 'CARD_NUMBER_REVEALED']);
 });
 
-it('shares one budget of password attempts with transfers', function () {
+it('never limits correct reveals', function () {
+    foreach (range(1, 10) as $i) {
+        reveal($this->card)->assertOk();
+    }
+});
+
+it('shares one count of wrong passwords with transfers', function () {
     $transfer = [
         'from_account_number' => $this->mine->account_number,
         'to_account_number' => $this->theirs->account_number,
@@ -128,9 +135,8 @@ it('shares one budget of password attempts with transfers', function () {
     foreach (range(1, 3) as $i) {
         $this->postJson('/api/v1/customer/transfers', $transfer)->assertUnprocessable();
     }
-    foreach (range(1, 2) as $i) {
-        reveal($this->card, 'nope')->assertUnprocessable();
-    }
+    reveal($this->card, 'nope')->assertUnprocessable();
+    reveal($this->card, 'nope')->assertStatus(429);
 
     reveal($this->card)->assertStatus(429);
 });

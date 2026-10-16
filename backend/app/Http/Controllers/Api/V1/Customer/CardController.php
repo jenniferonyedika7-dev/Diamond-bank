@@ -117,9 +117,9 @@ class CardController extends CustomerAreaController
 
     /**
      * The full number of one of the customer's own ACTIVE cards, after their
-     * password. The only endpoint that decrypts a card number. It shares the
-     * transfer throttle (one budget of password attempts), audits last4 only,
-     * and the response must not be cached.
+     * password. The only endpoint that decrypts a card number. Wrong passwords
+     * count toward the shared PasswordLockout; it audits last4 only, and the
+     * response must not be cached.
      */
     public function reveal(Request $request, string $cardId): JsonResponse
     {

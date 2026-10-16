@@ -45,7 +45,7 @@ it('keeps staff out of admin routes', function () {
 
 it('lets staff and a branch-less admin read the audit log, newest first, with filters', function () {
     $staff = staffAtBranch();
-    $customer = customerWithLogin();
+    $customer = customerWithLogin('PENDING', currentBranchId($staff));
     $this->actingAs($staff);
     $this->postJson("/api/v1/staff/customers/{$customer->customer_id}/verify")->assertOk();
 

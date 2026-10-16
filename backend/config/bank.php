@@ -40,4 +40,26 @@ return [
         'statement_months' => (int) env('BANK_LOAN_STATEMENT_MONTHS', 6),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Password Re-check Lockout
+    |--------------------------------------------------------------------------
+    |
+    | Wrong passwords on the in-app re-checks (transfers, card reveal, loan
+    | payments, change-password), counted per user. max_failures wrong ->
+    | locked for first_minutes; after that lock, one more wrong -> locked for
+    | second_minutes; after that, one more wrong -> the login is BLOCKED
+    | (admins are never blocked: they get another second_minutes lock).
+    | A correct password clears the count, and so does reset_hours without a
+    | wrong password. The login page has its own limits (LoginRequest).
+    |
+    */
+
+    'password_lockout' => [
+        'max_failures' => 5,
+        'first_minutes' => (int) env('LOCKOUT_FIRST_MINUTES', 1),
+        'second_minutes' => (int) env('LOCKOUT_SECOND_MINUTES', 2),
+        'reset_hours' => (int) env('LOCKOUT_RESET_HOURS', 24),
+    ],
+
 ];

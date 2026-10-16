@@ -222,7 +222,7 @@ class LoanController extends CustomerAreaController
 
     /**
      * Pays from one of the customer's accounts (channel ONLINE) after the
-     * password re-check. The route shares the transfer throttle.
+     * password re-check, which counts toward the shared PasswordLockout.
      */
     public function pay(LoanPaymentRequest $request, string $loanId): JsonResponse
     {

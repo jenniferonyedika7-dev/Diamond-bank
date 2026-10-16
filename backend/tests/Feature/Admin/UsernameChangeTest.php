@@ -2,7 +2,6 @@
 
 use App\Models\Customer;
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
@@ -110,31 +109,28 @@ it('ignores a password sent with a rename', function () {
 it('keeps the renamed user logged in: their session survives and shows the new name', function () {
     config(['session.driver' => 'database']);
     $user = User::factory()->create(['user_name' => 'awa']);
-    Auth::forgetGuards();
 
-    // The customer logs in for real; keep their session cookie.
-    $login = $this->postJson('/api/v1/auth/login', ['user_name' => 'awa', 'password' => 'password1'])->assertOk();
-    $sessionId = $login->getCookie(config('session.cookie'))->getValue();
+    // The customer logs in for real; keep their session id.
+    $sessionId = sessionIdFrom(onSession('')
+        ->postJson('/api/v1/auth/login', ['user_name' => 'awa', 'password' => 'password1'])
+        ->assertOk());
     expect(DB::table('sessions')->where('id', $sessionId)->value('user_id'))->toBe($user->user_id);
 
     // The admin renames them from another session.
-    Auth::forgetGuards();
+    onSession('');
     $this->actingAs($this->admin);
     $this->putJson("/api/v1/admin/customers/{$user->customer_id}/username", ['user_name' => 'awa.jallow'])->assertOk();
 
-    // The customer's next request on their existing session still works.
-    Auth::forgetGuards();
-    $this->withCookie(config('session.cookie'), $sessionId)
+    // The customer's next request, sent with their own session cookie, still works.
+    onSession($sessionId)
         ->getJson('/api/v1/auth/me')
         ->assertOk()
         ->assertJsonPath('data.user_name', 'awa.jallow');
-    expect(DB::table('sessions')->where('id', $sessionId)->exists())->toBeTrue();
+    expect(DB::table('sessions')->where('id', $sessionId)->value('user_id'))->toBe($user->user_id);
 
     // From now on only the new name logs in.
-    Auth::forgetGuards();
-    $this->withCookies([])->postJson('/api/v1/auth/login', ['user_name' => 'awa', 'password' => 'password1'])->assertUnauthorized();
-    Auth::forgetGuards();
-    $this->postJson('/api/v1/auth/login', ['user_name' => 'awa.jallow', 'password' => 'password1'])->assertOk();
+    onSession('')->postJson('/api/v1/auth/login', ['user_name' => 'awa', 'password' => 'password1'])->assertUnauthorized();
+    onSession('')->postJson('/api/v1/auth/login', ['user_name' => 'awa.jallow', 'password' => 'password1'])->assertOk();
 });
 
 it('has no admin route that sets a password', function () {

@@ -9,18 +9,27 @@ use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Responses\ApiResponse;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\PasswordLockout;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
     public function __construct(private AuditLogger $audit) {}
 
-    public function login(LoginRequest $request): JsonResponse
+    /**
+     * Wrong passwords for an ACTIVE login count toward the per-user
+     * PasswordLockout shared with the in-app password re-checks; while it is
+     * locked even the correct password is refused. Unknown user_names (and
+     * password spraying) are held back by LoginRequest's per-IP limit.
+     */
+    public function login(LoginRequest $request, PasswordLockout $lockout): JsonResponse
     {
         if ($seconds = $request->throttledFor()) {
             return ApiResponse::error("Too many login attempts. Try again in {$seconds} seconds.", 429, null, ['Retry-After' => (string) $seconds]);
@@ -33,9 +42,21 @@ class AuthController extends Controller
         $userName = $request->validated('user_name');
         $user = User::query()->where('user_name', $userName)->first();
 
+        if ($user !== null && ($seconds = $lockout->lockedFor($user)) !== null) {
+            $this->audit->logFor($user->user_id, 'LOGIN_FAILED', 'users', $user->user_id, ['user_name' => $userName, 'reason' => 'LOCKED']);
+
+            return PasswordLockout::lockedResponse($seconds);
+        }
+
         if (! $this->passwordMatches($user, $request->validated('password'))) {
             $request->recordFailedAttempt();
             $this->audit->logFor($user?->user_id, 'LOGIN_FAILED', 'users', $user?->user_id, ['user_name' => $userName]);
+
+            // Only an ACTIVE login is counted: a PENDING applicant or an already blocked login isn't
+            // blocked (again). This may answer 429 (a lock starts) or 403 (the login is now blocked).
+            if ($user?->status === 'ACTIVE') {
+                $lockout->recordFailure($user);
+            }
 
             // Same message whether or not the user_name exists.
             return ApiResponse::error('Invalid username or password.', 401);
@@ -45,12 +66,14 @@ class AuthController extends Controller
         if ($user->status !== 'ACTIVE') {
             $this->audit->logFor($user->user_id, 'LOGIN_FAILED', 'users', $user->user_id, ['user_name' => $userName, 'reason' => $user->status]);
 
-            return $user->status === 'PENDING'
-                ? ApiResponse::error('Your account is awaiting approval.', 403)
-                : ApiResponse::error('Your account is blocked. Please contact the bank.', 403);
+            return match (true) {
+                $user->status === 'PENDING' => ApiResponse::error('Your account is awaiting approval.', 403),
+                $this->blockedByLockout($user) => ApiResponse::error(PasswordLockout::blockedMessage($user), 403),
+                default => ApiResponse::error('Your account is blocked. Please contact the bank.', 403),
+            };
         }
 
-        $request->clearIpThrottle();
+        $lockout->cleared($user);
 
         Auth::guard('web')->login($user);
         $request->session()->regenerate();
@@ -83,9 +106,18 @@ class AuthController extends Controller
         return ApiResponse::success('Authenticated user.', $this->userPayload($request->user()));
     }
 
-    public function changePassword(ChangePasswordRequest $request, ChangePassword $changePassword): JsonResponse
+    public function changePassword(ChangePasswordRequest $request, ChangePassword $changePassword, PasswordLockout $lockout): JsonResponse
     {
         $user = $request->user();
+
+        if (! Hash::check($request->validated('current_password'), $user->password)) {
+            $this->audit->log('CHANGE_PASSWORD_FAILED', 'users', $user->user_id, null, $user);
+            $lockout->recordFailure($user);
+
+            throw ValidationException::withMessages(['current_password' => __('validation.current_password')]);
+        }
+        $lockout->cleared($user);
+
         $changePassword($user, $request->validated('password'));
 
         $request->session()->regenerate();
@@ -107,6 +139,19 @@ class AuthController extends Controller
             ...($user->customer ? ['kyc_status' => $user->customer->kyc_status] : []),
             ...($user->employee ? ['full_name' => $user->employee->full_name] : []),
         ];
+    }
+
+    /** Whether the latest block or unblock of $user was the password lockout's (PasswordLockout). */
+    private function blockedByLockout(User $user): bool
+    {
+        return DB::table('audit_log')
+            ->where('table_affected', 'users')
+            ->where('record_id', $user->user_id)
+            ->whereIn('action_type', [
+                'PASSWORD_LOCKOUT_BLOCKED', 'CUSTOMER_BLOCKED', 'CUSTOMER_UNBLOCKED', 'STAFF_BLOCKED', 'STAFF_REJECTED', 'STAFF_UNBLOCKED',
+            ])
+            ->orderByDesc('audit_log_id')
+            ->value('action_type') === 'PASSWORD_LOCKOUT_BLOCKED';
     }
 
     /**
