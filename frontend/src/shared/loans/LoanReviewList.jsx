@@ -14,7 +14,7 @@ import { formatMoney } from '../../lib/money.js'
 import { useApiList, useDebounced } from '../../lib/useApiList.js'
 
 const DESCRIPTIONS = {
-  staff: 'Loan applications for accounts at your branch. Record the four checks, then approve or reject.',
+  staff: 'Loans for accounts at your branch. Record the four checks, then approve or reject. Record cash payments on active loans.',
   admin: 'Loans at every branch. Staff have approved the ones awaiting you; your approval pays the loan out.',
 }
 

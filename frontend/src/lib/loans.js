@@ -55,3 +55,29 @@ export const STATUS_TABS = [
 export const TIN_PATTERN = /^\d{8,15}$/
 export const PHONE_PATTERN = /^\+?[0-9 ]{7,20}$/
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+export const CHANNEL_LABELS = { ONLINE: 'Online', BRANCH: 'Branch' }
+
+export const PAYMENT_TYPE_LABELS = { INSTALMENT: 'Next instalment', EARLY_PAYOFF: 'Pay everything now' }
+
+/** The payment options a plan allows (backend LoanRepayment): SINGLE loans are payoff-only. */
+export function paymentTypesFor(plan) {
+  return plan === 'MONTHLY' ? ['INSTALMENT', 'EARLY_PAYOFF'] : ['EARLY_PAYOFF']
+}
+
+/** What a payment option costs, straight from the repayment quote. */
+export function quotedAmount(quote, type) {
+  return type === 'INSTALMENT' ? quote.next_instalment?.amount : quote.payoff?.amount
+}
+
+/**
+ * The payment request body, copied from the quote with no arithmetic.
+ * sp_repay_loan works the amount out again and answers 409 if it changed.
+ */
+export function paymentBody(quote, type) {
+  return {
+    payment_type: type,
+    instalment_number: type === 'INSTALMENT' ? quote.next_instalment.instalment_number : null,
+    amount: quotedAmount(quote, type),
+  }
+}

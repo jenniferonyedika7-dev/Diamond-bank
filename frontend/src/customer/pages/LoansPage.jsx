@@ -88,7 +88,7 @@ function LoanCard({ loan, onCancel }) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 font-medium text-slate-900">
-            {loan.loan_type.type_name} loan
+            {loan.loan_type.type_name}
             <LoanStatusBadge status={loan.status} />
           </p>
           <p className="mt-1 text-sm text-slate-700">
@@ -108,7 +108,7 @@ function LoanCard({ loan, onCancel }) {
             to={`/customer/loans/${loan.loan_id}`}
             className={`${LINK_BUTTON} bg-white text-navy-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus-visible:outline-navy-600`}
           >
-            View<span className="sr-only"> {loan.loan_type.type_name} loan of {formatMoney(loan.amount)}</span>
+            View<span className="sr-only"> {loan.loan_type.type_name} of {formatMoney(loan.amount)}</span>
           </Link>
           {loan.can_cancel && (
             <Button variant="secondary" onClick={onCancel}>

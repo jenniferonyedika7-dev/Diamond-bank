@@ -29,6 +29,7 @@ import CustomerCardsPage from './customer/pages/CardsPage.jsx'
 import CustomerLoanDetailPage from './customer/pages/LoanDetailPage.jsx'
 import CustomerLoansPage from './customer/pages/LoansPage.jsx'
 import CustomerOverviewPage from './customer/pages/OverviewPage.jsx'
+import PayLoanPage from './customer/pages/PayLoanPage.jsx'
 import ProfilePage from './customer/pages/ProfilePage.jsx'
 import TransferPage from './customer/pages/TransferPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
@@ -112,6 +113,7 @@ export default function App() {
                 <Route path="loans" element={<CustomerLoansPage />} />
                 <Route path="loans/apply" element={<ApplyLoanPage />} />
                 <Route path="loans/:loanId" element={<CustomerLoanDetailPage />} />
+                <Route path="loans/:loanId/pay" element={<PayLoanPage />} />
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="change-password" element={<ChangePasswordPage />} />
               </Route>

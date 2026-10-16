@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import Alert from '../../components/Alert.jsx'
 import Button from '../../components/Button.jsx'
@@ -13,16 +13,27 @@ import { LoanStatusBadge } from '../../components/StatusBadges.jsx'
 import TransactionList from '../../components/TransactionList.jsx'
 import { api, getErrorMessage, getFieldErrors } from '../../lib/api.js'
 import { formatDate, formatDateTime } from '../../lib/format.js'
-import { EMPLOYMENT_FIELD_LABELS, EMPLOYMENT_LABELS, PURPOSE_LABELS } from '../../lib/loans.js'
+import {
+  EMPLOYMENT_FIELD_LABELS,
+  EMPLOYMENT_LABELS,
+  PAYMENT_TYPE_LABELS,
+  PURPOSE_LABELS,
+  paymentBody,
+  paymentTypesFor,
+  quotedAmount,
+} from '../../lib/loans.js'
 import { formatMoney } from '../../lib/money.js'
 import { useApiList } from '../../lib/useApiList.js'
 import { Field, LoanTermsFields, Panel } from './LoanParts.jsx'
+import PaymentHistory from './PaymentHistory.jsx'
+import RepaymentSummary from './RepaymentSummary.jsx'
 import ScheduleTable from './ScheduleTable.jsx'
 
 /**
  * One loan for staff (their branch: checks, first approval, reject) or an
  * admin (every branch: read-only checks, approve and disburse, reject).
- * Every figure, including affordability, comes from the API.
+ * Once a loan is ACTIVE, staff record cash payments for it; admins only see
+ * the payment history. Every figure, including affordability, comes from the API.
  */
 export default function LoanReviewDetail({ area }) {
   const { loanId } = useParams()
@@ -30,6 +41,7 @@ export default function LoanReviewDetail({ area }) {
   const [loadError, setLoadError] = useState('')
   const [dialog, setDialog] = useState(null) // { type: 'check', check } | { type: 'approve' } | { type: 'reject' }
   const [flash, setFlash] = useState('')
+  const [receipt, setReceipt] = useState(null) // the last cash payment recorded here: { message, data }
   const base = `/api/v1/${area}/loans/${loanId}`
 
   const load = useCallback(
@@ -76,6 +88,24 @@ export default function LoanReviewDetail({ area }) {
       </div>
 
       <Alert tone="success">{flash}</Alert>
+
+      {receipt && (
+        <Panel title="Cash payment recorded">
+          <Receipt receipt={receipt} branch={loan.branch.branch_name} />
+        </Panel>
+      )}
+
+      {isStaff && loan.status === 'ACTIVE' && (
+        <CashPayment
+          loan={loan}
+          base={base}
+          onPaid={(paid) => {
+            setFlash('')
+            setReceipt(paid)
+            load()
+          }}
+        />
+      )}
 
       {canDecide && (
         <Panel title="Decision">
@@ -181,6 +211,13 @@ export default function LoanReviewDetail({ area }) {
         <div>
           <h2 className="mb-3 text-lg font-semibold text-navy-900">Repayment schedule</h2>
           <ScheduleTable schedule={loan.schedule} />
+        </div>
+      )}
+
+      {['ACTIVE', 'CLOSED'].includes(loan.status) && (
+        <div>
+          <h2 className="mb-3 text-lg font-semibold text-navy-900">Payments</h2>
+          <PaymentHistory payments={loan.payments} staff />
         </div>
       )}
 
@@ -360,5 +397,162 @@ function CheckDialog({ check, onSubmit, onClose }) {
         </div>
       </form>
     </Modal>
+  )
+}
+
+/**
+ * Staff record cash taken at the branch for an ACTIVE loan: the next
+ * instalment (MONTHLY) or everything now. The amount is the quote's. The
+ * parent keeps the receipt, so it stays on screen when a payoff closes the loan.
+ */
+function CashPayment({ loan, base, onPaid }) {
+  const [quote, setQuote] = useState(null)
+  const [quoteError, setQuoteError] = useState('')
+  const [paying, setPaying] = useState(null) // 'INSTALMENT' | 'EARLY_PAYOFF'
+
+  const loadQuote = useCallback(
+    () =>
+      api
+        .get(`${base}/repayment`)
+        .then(({ data }) => {
+          setQuote(data.data)
+          setQuoteError('')
+        })
+        .catch((err) => setQuoteError(getErrorMessage(err))),
+    [base],
+  )
+
+  useEffect(() => {
+    loadQuote()
+  }, [loadQuote])
+
+  const types = quote ? paymentTypesFor(quote.repayment_plan).filter((t) => quotedAmount(quote, t)) : []
+
+  return (
+    <Panel title="Record a cash payment">
+      {quoteError ? (
+        <Alert>{quoteError}</Alert>
+      ) : !quote ? (
+        <Loading />
+      ) : (
+        <RepaymentSummary
+          quote={quote}
+          actions={types.map((t, i) => (
+            <Button key={t} variant={i === 0 ? 'primary' : 'secondary'} onClick={() => setPaying(t)}>
+              {t === 'INSTALMENT' ? 'Record next instalment' : 'Record payment of everything'} ({formatMoney(quotedAmount(quote, t))})
+            </Button>
+          ))}
+        />
+      )}
+      {paying && quote && (
+        <CashPaymentDialog
+          loan={loan}
+          quote={quote}
+          type={paying}
+          base={base}
+          onClose={() => setPaying(null)}
+          onAmountChanged={loadQuote}
+          onPaid={(paid) => {
+            setPaying(null)
+            loadQuote()
+            onPaid(paid)
+          }}
+        />
+      )}
+    </Panel>
+  )
+}
+
+/**
+ * Confirms a cash payment. A cash payment recorded twice is a real money
+ * error, so submittingRef blocks a second confirm before React re-renders the
+ * disabled button, and the dialog can't be closed while the request is in flight.
+ */
+function CashPaymentDialog({ loan, quote, type, base, onClose, onAmountChanged, onPaid }) {
+  const [busy, setBusy] = useState(false)
+  const submittingRef = useRef(false)
+  const [error, setError] = useState('')
+  const amount = quotedAmount(quote, type)
+  const next = quote.next_instalment
+  const payoff = quote.payoff
+
+  function close() {
+    if (!submittingRef.current) onClose()
+  }
+
+  async function handleConfirm() {
+    if (submittingRef.current) return
+    submittingRef.current = true
+    setBusy(true)
+    setError('')
+    try {
+      const { data } = await api.post(`${base}/payments`, paymentBody(quote, type))
+      onPaid({ message: data.message, data: data.data })
+    } catch (err) {
+      const message = getErrorMessage(err)
+      setError(message)
+      // The schedule moved on: fetch the new figures; this dialog then shows the new amount.
+      if (err.response?.status === 409 && message.startsWith('The amount has changed')) onAmountChanged()
+    } finally {
+      submittingRef.current = false
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal title="Record this cash payment?" onClose={close}>
+      <div className="space-y-4 text-sm text-slate-700">
+        <p>
+          Confirm you have received <strong className="tabular-nums">{formatMoney(amount)}</strong> in cash from{' '}
+          <strong>{loan.customer.name}</strong> for loan #{loan.loan_id}.
+        </p>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
+          <Field label="Payment" value={PAYMENT_TYPE_LABELS[type]} />
+          {type === 'INSTALMENT' ? (
+            <>
+              <Field label="Instalment" value={`#${next.instalment_number}, due ${formatDate(next.due_date)}${next.overdue ? ' (overdue)' : ''}`} />
+              <Field label="Principal" value={formatMoney(next.principal)} />
+              <Field label="Interest" value={formatMoney(next.interest)} />
+            </>
+          ) : (
+            <>
+              <Field label="Principal" value={formatMoney(payoff.principal)} />
+              <Field label="Interest charged" value={formatMoney(payoff.interest_charged)} />
+              <Field label="Interest waived" value={formatMoney(payoff.interest_waived)} />
+            </>
+          )}
+        </dl>
+        <p className="text-slate-600">No account is debited. The payment is recorded at {loan.branch.branch_name} under your name.</p>
+        <Alert>{error}</Alert>
+      </div>
+      <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+        <Button variant="secondary" onClick={close} disabled={busy}>
+          Cancel
+        </Button>
+        <Button onClick={handleConfirm} loading={busy} loadingText="Recording…">
+          Record {formatMoney(amount)}
+        </Button>
+      </div>
+    </Modal>
+  )
+}
+
+function Receipt({ receipt, branch }) {
+  const { data } = receipt
+  return (
+    <div className="space-y-3">
+      <Alert tone="success">{receipt.message}</Alert>
+      <dl className="grid gap-x-6 gap-y-3 rounded-lg bg-slate-50 p-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+        <Field label="Receipt" value={`Payment #${data.loan_payment_id}`} />
+        <Field label="Payment" value={PAYMENT_TYPE_LABELS[data.payment_type]} />
+        <Field label="Amount received" value={formatMoney(data.amount)} />
+        <Field label="Principal" value={formatMoney(data.principal)} />
+        <Field label="Interest charged" value={formatMoney(data.interest_charged)} />
+        <Field label="Interest waived" value={formatMoney(data.interest_waived)} />
+        <Field label="Loan balance after" value={formatMoney(data.remaining_balance)} />
+        <Field label="Loan" value={data.loan_status === 'CLOSED' ? 'Paid off and closed' : 'Active'} />
+        <Field label="Received at" value={branch} />
+      </dl>
+    </div>
   )
 }

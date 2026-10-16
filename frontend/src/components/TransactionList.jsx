@@ -10,7 +10,17 @@ const LABELS = {
   TRANSFER_IN: 'Transfer in',
   TRANSFER_OUT: 'Transfer out',
   LOAN_DISBURSEMENT: 'Loan disbursement',
-  LOAN_PAYMENT: 'Loan payment',
+  LOAN_PAYMENT: 'Loan repayment',
+}
+
+// sp_repay_loan writes this description on every online loan payment.
+const LOAN_PAYMENT_DESCRIPTION = /^Loan #(\d+) repayment$/
+
+/** "Loan repayment – #12" for a loan payment; the plain label if the description isn't the procedure's. */
+function typeLabel(row) {
+  const label = LABELS[row.type_name] ?? row.type_name
+  const loan = row.type_name === 'LOAN_PAYMENT' && LOAN_PAYMENT_DESCRIPTION.exec(row.description ?? '')
+  return loan ? `${label} – #${loan[1]}` : label
 }
 
 function SignedAmount({ row }) {
@@ -32,7 +42,7 @@ export default function TransactionList({ transactions, showAccount = false }) {
         {transactions.map((row) => (
           <li key={row.transaction_id} className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-slate-200">
             <div className="flex items-baseline justify-between gap-3">
-              <span className="font-medium text-slate-900">{LABELS[row.type_name] ?? row.type_name}</span>
+              <span className="font-medium text-slate-900">{typeLabel(row)}</span>
               <SignedAmount row={row} />
             </div>
             <p className="mt-1 text-xs text-slate-500">
@@ -65,7 +75,7 @@ export default function TransactionList({ transactions, showAccount = false }) {
               <tr key={row.transaction_id}>
                 <td className="whitespace-nowrap px-4 py-3 text-slate-700">{formatDateTime(row.transaction_date)}</td>
                 {showAccount && <td className="px-4 py-3 font-mono text-xs text-slate-700">{row.account_number}</td>}
-                <td className="px-4 py-3 text-slate-900">{LABELS[row.type_name] ?? row.type_name}</td>
+                <td className="px-4 py-3 text-slate-900">{typeLabel(row)}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-right">
                   <SignedAmount row={row} />
                 </td>

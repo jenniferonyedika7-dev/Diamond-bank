@@ -51,7 +51,7 @@ const INSTALMENT = {
   PAID: ['success', 'Paid'],
   SETTLED: ['neutral', 'Settled'],
   OVERDUE: ['danger', 'Overdue'],
-  DUE: ['warning', 'Due'],
+  DUE: ['warning', 'Next payment'],
   UPCOMING: ['info', 'Upcoming'],
 }
 

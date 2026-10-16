@@ -87,6 +87,18 @@ it('answers 409 for a loan that is not active, and for a changed amount', functi
     expect(DB::table('loan_payment')->count())->toBe(0);
 });
 
+it('refuses a cash instalment on a SINGLE loan', function () {
+    DB::table('loan_instalment')->where('loan_id', $this->loan->loan_id)->delete();
+    DB::table('loan')->where('loan_id', $this->loan->loan_id)->update(['status' => 'CANCELLED']);
+    $single = activeLoanFor($this->customer, $this->account, ['repayment_plan' => 'SINGLE']);
+
+    recordCash($single, ['amount' => '11200.00'])
+        ->assertUnprocessable()
+        ->assertJsonPath('message', 'This loan is repaid in one payment. Choose to pay everything now.');
+
+    expect(DB::table('loan_payment')->count())->toBe(0);
+});
+
 it('lets an admin working at this branch record cash, like a deposit', function () {
     $admin = User::factory()->admin()->create();
     DB::table('employee_branch_lnk')->insert([
