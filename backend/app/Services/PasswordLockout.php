@@ -37,6 +37,32 @@ class PasswordLockout
             : 'Your account is locked. Please contact your branch.';
     }
 
+    /** What a user with an expired temporary password is told at login. */
+    public static function expiredTemporaryPasswordMessage(User $user): string
+    {
+        return $user->hasRole('staff')
+            ? 'This temporary password has expired. Please contact the administrator.'
+            : 'This temporary password has expired. Please contact your branch.';
+    }
+
+    /**
+     * Whether $user's latest block or unblock was this lockout's. A login blocked
+     * this way is only reopened through an access request (customers) or an
+     * administrator's restore (staff), not the plain unblock.
+     */
+    public static function blockedByLockout(User $user): bool
+    {
+        return $user->status === 'BLOCKED' && DB::table('audit_log')
+            ->where('table_affected', 'users')
+            ->where('record_id', $user->user_id)
+            ->whereIn('action_type', [
+                'PASSWORD_LOCKOUT_BLOCKED', 'CUSTOMER_BLOCKED', 'CUSTOMER_UNBLOCKED',
+                'STAFF_BLOCKED', 'STAFF_REJECTED', 'STAFF_UNBLOCKED', 'STAFF_ACCESS_RESTORED',
+            ])
+            ->orderByDesc('audit_log_id')
+            ->value('action_type') === 'PASSWORD_LOCKOUT_BLOCKED';
+    }
+
     public function __construct(private AuditLogger $audit, private Request $request) {}
 
     /** Seconds until $user may try a password again, or null when not locked. */

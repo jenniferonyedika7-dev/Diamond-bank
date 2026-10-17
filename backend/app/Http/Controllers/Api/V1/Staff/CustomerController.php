@@ -8,6 +8,8 @@ use App\Http\Responses\ApiResponse;
 use App\Models\Customer;
 use App\Queries\CardDirectory;
 use App\Queries\CustomerDirectory;
+use App\Services\AccessRecovery;
+use App\Services\PasswordLockout;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -57,7 +59,16 @@ class CustomerController extends StaffAreaController
                 : null,
             'branch' => $customer->branch?->only(['branch_id', 'branch_name', 'branch_code']),
             'addresses' => $customer->addresses,
-            'login' => $customer->user?->only(['user_id', 'user_name', 'status', 'last_login']),
+            'login' => $customer->user === null ? null : [
+                ...$customer->user->only(['user_id', 'user_name', 'status', 'last_login']),
+                'recovery' => AccessRecovery::needs($customer->user),
+            ],
+            'pending_access_request' => DB::table('access_request')
+                ->leftJoin('users', 'users.user_id', '=', 'access_request.requested_by')
+                ->leftJoin('employee', 'employee.employee_id', '=', 'users.employee_id')
+                ->where('access_request.customer_id', $customer->customer_id)
+                ->where('access_request.status', 'PENDING')
+                ->first(['access_request.access_request_id', 'access_request.request_type', 'access_request.requested_at', 'employee.full_name as requested_by_name']),
             'accounts' => $accounts,
             'cards' => $cards,
             'recent_transactions' => $recent,
@@ -98,8 +109,13 @@ class CustomerController extends StaffAreaController
             ['reason' => $request->validated('reason')]);
     }
 
+    /** Manually blocked logins only: one locked by wrong passwords needs an access request (AccessRequestController). */
     public function unblock(Customer $customer): JsonResponse
     {
+        if ($customer->user !== null && PasswordLockout::blockedByLockout($customer->user)) {
+            return ApiResponse::error('This login was locked after too many wrong passwords. Raise an account access request instead.', 409);
+        }
+
         return $this->changeLogin($customer, 'BLOCKED', 'ACTIVE', 'CUSTOMER_UNBLOCKED', 'Only a blocked login can be unblocked.', 'Customer login unblocked.');
     }
 

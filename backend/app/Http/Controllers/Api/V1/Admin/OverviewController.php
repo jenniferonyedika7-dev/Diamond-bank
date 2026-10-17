@@ -32,6 +32,7 @@ class OverviewController extends Controller
                 'REJECTED' => (int) ($customersByKyc['REJECTED'] ?? 0),
             ],
             'accounts' => DB::table('account')->count(),
+            'pending_access_requests' => DB::table('access_request')->where('status', 'PENDING')->count(),
         ]);
     }
 }

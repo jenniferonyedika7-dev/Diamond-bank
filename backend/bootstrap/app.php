@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\ProcedureFailed;
+use App\Http\Middleware\EnsureLocalEnvironment;
 use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\EnsurePasswordNotLocked;
 use App\Http\Middleware\EnsureStaffHasBranch;
@@ -33,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'password.changed' => EnsurePasswordChanged::class,
             'staff.branch' => EnsureStaffHasBranch::class,
             'password.lockout' => EnsurePasswordNotLocked::class,
+            'local.only' => EnsureLocalEnvironment::class,
         ]);
 
         // Check status, password, role and branch before route-model binding, so

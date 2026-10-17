@@ -1,5 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import AdminLayout from './admin/AdminLayout.jsx'
+import AccessRequestDetailPage from './admin/pages/AccessRequestDetailPage.jsx'
+import AccessRequestsPage from './admin/pages/AccessRequestsPage.jsx'
 import AccountTypesPage from './admin/pages/AccountTypesPage.jsx'
 import BankSettingsPage from './admin/pages/BankSettingsPage.jsx'
 import BranchesPage from './admin/pages/BranchesPage.jsx'
@@ -20,6 +22,7 @@ import AppLayout from './components/AppLayout.jsx'
 import FullPageSpinner from './components/FullPageSpinner.jsx'
 import { dashboardPath } from './lib/roles.js'
 import ChangePasswordPage from './pages/ChangePasswordPage.jsx'
+import DemoSmsOutboxPage from './pages/DemoSmsOutboxPage.jsx'
 import CustomerLayout from './customer/CustomerLayout.jsx'
 import CustomerShell from './customer/CustomerShell.jsx'
 import CustomerAccountDetailPage from './customer/pages/AccountDetailPage.jsx'
@@ -84,6 +87,8 @@ export default function App() {
                 <Route path="loans" element={<AdminLoansPage />} />
                 <Route path="loans/:loanId" element={<AdminLoanDetailPage />} />
                 <Route path="staff" element={<StaffPage />} />
+                <Route path="access-requests" element={<AccessRequestsPage />} />
+                <Route path="access-requests/:id" element={<AccessRequestDetailPage />} />
                 <Route path="audit-log" element={<AuditLogPage />} />
               </Route>
             </Route>
@@ -119,6 +124,9 @@ export default function App() {
               </Route>
             </Route>
           </Route>
+
+          {/* Development only: the backend answers 404 unless APP_ENV=local. Open whether signed in or not. */}
+          <Route path="/demo/sms-outbox" element={<DemoSmsOutboxPage />} />
 
           <Route path="*" element={<HomeRedirect />} />
         </Routes>

@@ -14,7 +14,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -68,9 +67,16 @@ class AuthController extends Controller
 
             return match (true) {
                 $user->status === 'PENDING' => ApiResponse::error('Your account is awaiting approval.', 403),
-                $this->blockedByLockout($user) => ApiResponse::error(PasswordLockout::blockedMessage($user), 403),
+                PasswordLockout::blockedByLockout($user) => ApiResponse::error(PasswordLockout::blockedMessage($user), 403),
                 default => ApiResponse::error('Your account is blocked. Please contact the bank.', 403),
             };
+        }
+
+        // The password was right, but a temporary one only works for its lifetime (AccessRecovery).
+        if ($user->hasExpiredTemporaryPassword()) {
+            $this->audit->logFor($user->user_id, 'TEMP_PASSWORD_EXPIRED', 'users', $user->user_id, ['user_name' => $userName]);
+
+            return ApiResponse::error(PasswordLockout::expiredTemporaryPasswordMessage($user), 403);
         }
 
         $lockout->cleared($user);
@@ -118,6 +124,13 @@ class AuthController extends Controller
         }
         $lockout->cleared($user);
 
+        // Signed in before the temporary password expired: it can't be used to set a new one after.
+        if ($user->hasExpiredTemporaryPassword()) {
+            $this->audit->log('TEMP_PASSWORD_EXPIRED', 'users', $user->user_id, null, $user);
+
+            return ApiResponse::error(PasswordLockout::expiredTemporaryPasswordMessage($user), 403);
+        }
+
         $changePassword($user, $request->validated('password'));
 
         $request->session()->regenerate();
@@ -139,19 +152,6 @@ class AuthController extends Controller
             ...($user->customer ? ['kyc_status' => $user->customer->kyc_status] : []),
             ...($user->employee ? ['full_name' => $user->employee->full_name] : []),
         ];
-    }
-
-    /** Whether the latest block or unblock of $user was the password lockout's (PasswordLockout). */
-    private function blockedByLockout(User $user): bool
-    {
-        return DB::table('audit_log')
-            ->where('table_affected', 'users')
-            ->where('record_id', $user->user_id)
-            ->whereIn('action_type', [
-                'PASSWORD_LOCKOUT_BLOCKED', 'CUSTOMER_BLOCKED', 'CUSTOMER_UNBLOCKED', 'STAFF_BLOCKED', 'STAFF_REJECTED', 'STAFF_UNBLOCKED',
-            ])
-            ->orderByDesc('audit_log_id')
-            ->value('action_type') === 'PASSWORD_LOCKOUT_BLOCKED';
     }
 
     /**

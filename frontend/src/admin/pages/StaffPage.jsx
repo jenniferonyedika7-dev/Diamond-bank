@@ -14,6 +14,8 @@ import Spinner from '../../components/Spinner.jsx'
 import { api, getErrorMessage, getFieldErrors } from '../../lib/api.js'
 import { formatDate } from '../../lib/format.js'
 import { useApiList, useDebounced } from '../../lib/useApiList.js'
+import { RECOVERY_LABELS } from '../../shared/access/labels.js'
+import RestoreAccessDialog from '../RestoreAccessDialog.jsx'
 import UsernameDialog from '../UsernameDialog.jsx'
 
 const REASON_COPY = {
@@ -49,7 +51,7 @@ export default function StaffPage() {
     search: debouncedSearch || undefined,
   })
 
-  const [action, setAction] = useState(null) // { type: 'approve'|'reject'|'block'|'unblock'|'username', user }
+  const [action, setAction] = useState(null) // { type: 'approve'|'reject'|'block'|'unblock'|'restore'|'username', user }
   const [flash, setFlash] = useState('')
 
   function selectTab(id) {
@@ -66,7 +68,7 @@ export default function StaffPage() {
 
   return (
     <section>
-      <PageHeader title="Staff" description="Approve new staff registrations, block or unblock staff accounts, and change usernames." />
+      <PageHeader title="Staff" description="Approve new staff registrations, block or unblock staff accounts, restore access after a lockout, and change usernames." />
 
       <div role="tablist" aria-label="Staff by status" className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200">
         {TABS.map((t) => (
@@ -137,6 +139,7 @@ export default function StaffPage() {
           }}
         />
       )}
+      {action?.type === 'restore' && <RestoreAccessDialog user={action.user} onClose={() => setAction(null)} onDone={done} />}
       {action?.type === 'username' && (
         <UsernameDialog
           endpoint={`/api/v1/admin/staff/${action.user.user_id}/username`}
@@ -180,6 +183,7 @@ function StaffCard({ user, tab, onAction }) {
             <span className="text-sm font-normal text-slate-500">@{user.user_name}</span>
             {rejected && <Badge tone="danger">Rejected</Badge>}
             {user.status === 'BLOCKED' && !rejected && <Badge tone="warning">Blocked</Badge>}
+            {user.recovery && <Badge tone="danger">{RECOVERY_LABELS[user.recovery]}</Badge>}
           </p>
           <dl className="mt-2 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
             <Detail label="Position" value={user.position} />
@@ -207,10 +211,18 @@ function StaffCard({ user, tab, onAction }) {
               Block<span className="sr-only"> {user.full_name}</span>
             </Button>
           )}
-          {tab === 'blocked' && !rejected && (
-            <Button variant="secondary" onClick={() => onAction('unblock')}>
-              Unblock<span className="sr-only"> {user.full_name}</span>
+          {/* Locked by wrong passwords (or an expired temporary password): Restore access, never the plain unblock. */}
+          {user.recovery ? (
+            <Button onClick={() => onAction('restore')}>
+              Restore access<span className="sr-only"> for {user.full_name}</span>
             </Button>
+          ) : (
+            tab === 'blocked' &&
+            !rejected && (
+              <Button variant="secondary" onClick={() => onAction('unblock')}>
+                Unblock<span className="sr-only"> {user.full_name}</span>
+              </Button>
+            )
           )}
           <Button variant="secondary" onClick={() => onAction('username')}>
             Change username<span className="sr-only"> for {user.full_name}</span>

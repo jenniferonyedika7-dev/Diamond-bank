@@ -115,6 +115,7 @@ it('reports overview counts', function () {
             'branches' => 0,
             'customers' => ['total' => 0, 'PENDING' => 0, 'VERIFIED' => 0, 'REJECTED' => 0],
             'accounts' => 0,
+            'pending_access_requests' => 0,
         ]]);
 
     Customer::factory()->create(['kyc_status' => 'VERIFIED']);

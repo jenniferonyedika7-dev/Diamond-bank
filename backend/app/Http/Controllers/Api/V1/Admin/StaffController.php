@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Requests\Admin\ApproveStaffRequest;
+use App\Http\Requests\Admin\RestoreAccessRequest;
 use App\Http\Requests\ReasonRequest;
 use App\Http\Responses\ApiResponse;
 use App\Models\User;
+use App\Services\AccessRecovery;
+use App\Services\PasswordLockout;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Staff accounts only. The {staffUser} route parameter is resolved by
@@ -57,7 +61,7 @@ class StaffController extends AdminController
             ->orderByDesc('users.created_at')
             ->orderByDesc('users.user_id')
             ->select([
-                'users.user_id', 'users.user_name', 'users.status', 'users.created_at',
+                'users.user_id', 'users.user_name', 'users.status', 'users.temp_password_expires_at', 'users.created_at',
                 'employee.full_name', 'employee.national_id', 'employee.position', 'employee.email', 'employee.phone',
                 'branch.branch_id', 'branch.branch_name', 'department.department_id', 'department.department_name',
             ])
@@ -74,6 +78,10 @@ class StaffController extends AdminController
                 'branch' => $row->branch_id ? ['branch_id' => $row->branch_id, 'branch_name' => $row->branch_name] : null,
                 'department' => $row->department_id ? ['department_id' => $row->department_id, 'department_name' => $row->department_name] : null,
                 'created_at' => $row->created_at,
+                // LOCKOUT_BLOCKED or TEMP_PASSWORD_EXPIRED: restored with restoreAccess(), not unblock().
+                'recovery' => $row->status === 'BLOCKED' || $row->temp_password_expires_at !== null
+                    ? AccessRecovery::needs(User::with('role')->find($row->user_id))
+                    : null,
             ]);
 
         return ApiResponse::paginated('Staff.', $staff);
@@ -126,6 +134,46 @@ class StaffController extends AdminController
             'Only pending staff can be rejected.', "{$staffUser->user_name}'s registration has been rejected.");
     }
 
+    /**
+     * A staff member locked out by wrong passwords (PasswordLockout), or holding
+     * an expired temporary password, contacted the administrator, who checked
+     * who they are. There is no higher approver, so this reopens the login
+     * straight away (AccessRecovery::restore), texting a temporary password for
+     * UNBLOCK_AND_RESET.
+     */
+    public function restoreAccess(RestoreAccessRequest $request, User $staffUser, AccessRecovery $recovery): JsonResponse
+    {
+        return DB::transaction(function () use ($request, $staffUser, $recovery) {
+            $user = User::query()->with('role')->lockForUpdate()->findOrFail($staffUser->user_id);
+
+            $reason = AccessRecovery::needs($user);
+            if ($reason === null) {
+                return ApiResponse::error('Only staff locked out by wrong passwords, or with an expired temporary password, can be restored here.', 409);
+            }
+            $type = $request->validated('request_type');
+            if (! AccessRecovery::allows($reason, $type)) {
+                throw ValidationException::withMessages([
+                    'request_type' => 'The temporary password has expired, so they need a new one: choose unblock and reset.',
+                ]);
+            }
+
+            $this->audit->log('STAFF_ACCESS_RESTORED', 'users', $user->user_id, [
+                'user_name' => $user->user_name,
+                'before' => ['status' => $user->status],
+                'after' => ['status' => 'ACTIVE'],
+                'reason' => $reason,
+                'contact_channel' => $request->validated('contact_channel'),
+                'verification_note' => $request->validated('verification_note'),
+                'request_type' => $type,
+            ]);
+            $recovery->restore($user, $type);
+
+            return ApiResponse::success($type === AccessRecovery::UNBLOCK_AND_RESET
+                ? "{$user->user_name}'s access has been restored. A temporary password has been sent by SMS."
+                : "{$user->user_name}'s access has been restored. They have been told by SMS.");
+        });
+    }
+
     /** BLOCKED -> ACTIVE. A rejected applicant has no branch and stays blocked. */
     public function unblock(User $staffUser): JsonResponse
     {
@@ -133,6 +181,9 @@ class StaffController extends AdminController
             $status = $this->lockedStatus($staffUser);
             if ($status !== 'BLOCKED') {
                 return ApiResponse::error('Only blocked staff can be unblocked.', 409);
+            }
+            if (PasswordLockout::blockedByLockout($staffUser->fresh())) {
+                return ApiResponse::error('This staff member was locked out by wrong passwords. Use Restore access instead.', 409);
             }
 
             $hasBranch = DB::table('employee_branch_lnk')

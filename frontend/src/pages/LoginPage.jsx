@@ -5,7 +5,7 @@ import Alert from '../components/Alert.jsx'
 import AuthLayout from '../components/AuthLayout.jsx'
 import Button from '../components/Button.jsx'
 import FormField from '../components/FormField.jsx'
-import { getErrorMessage, getFieldErrors } from '../lib/api.js'
+import { api, getErrorMessage, getFieldErrors } from '../lib/api.js'
 import { dashboardPath } from '../lib/roles.js'
 
 export default function LoginPage() {
@@ -20,6 +20,19 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [retryIn, setRetryIn] = useState(0)
+  const [demoOutbox, setDemoOutbox] = useState(false)
+
+  // The demo SMS outbox exists only when the backend runs with APP_ENV=local.
+  useEffect(() => {
+    let ignore = false
+    api
+      .get('/api/v1/features')
+      .then(({ data }) => !ignore && setDemoOutbox(data.data?.demo_sms_outbox === true))
+      .catch(() => {})
+    return () => {
+      ignore = true
+    }
+  }, [])
 
   // 429: count down and keep the button disabled until the lockout ends.
   useEffect(() => {
@@ -106,6 +119,13 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
+      {demoOutbox && (
+        <p className="mt-4 text-center text-xs">
+          <Link to="/demo/sms-outbox" className="text-slate-500 underline underline-offset-2 hover:text-navy-700">
+            Demo SMS outbox
+          </Link>
+        </p>
+      )}
     </AuthLayout>
   )
 }

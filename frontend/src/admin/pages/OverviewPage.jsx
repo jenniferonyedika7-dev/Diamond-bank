@@ -71,6 +71,18 @@ export default function OverviewPage() {
           </div>
         )}
 
+        {overview.pending_access_requests > 0 && (
+          <Link
+            to="/admin/access-requests"
+            className="flex items-center justify-between gap-4 rounded-xl bg-amber-50 p-4 text-amber-900 ring-1 ring-amber-200 hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600"
+          >
+            <span className="font-medium">
+              {overview.pending_access_requests} access {overview.pending_access_requests === 1 ? 'request' : 'requests'} awaiting your decision
+            </span>
+            <span className="text-sm font-semibold">Review →</span>
+          </Link>
+        )}
+
         {overview.pending_staff > 0 && (
           <Link
             to="/admin/staff?tab=pending"
@@ -87,6 +99,7 @@ export default function OverviewPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="Pending staff" value={overview.pending_staff} to="/admin/staff?tab=pending" />
         <StatCard label="Active staff" value={overview.active_staff} detail={`${overview.blocked_staff} blocked`} to="/admin/staff?tab=active" />
+        <StatCard label="Access requests" value={overview.pending_access_requests} detail="pending" to="/admin/access-requests" />
         <StatCard label="Branches" value={overview.branches} to="/admin/branches" />
         <StatCard
           label="Customers"

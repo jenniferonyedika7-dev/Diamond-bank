@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\AccessRequestController as AdminAccessRequestController;
 use App\Http\Controllers\Api\V1\Admin\AccountTypeController;
 use App\Http\Controllers\Api\V1\Admin\BankController;
 use App\Http\Controllers\Api\V1\Admin\BranchController as AdminBranchController;
@@ -21,6 +22,8 @@ use App\Http\Controllers\Api\V1\Customer\LoanController as CustomerLoanControlle
 use App\Http\Controllers\Api\V1\Customer\OverviewController as CustomerOverviewController;
 use App\Http\Controllers\Api\V1\Customer\ProfileController;
 use App\Http\Controllers\Api\V1\Customer\TransferController;
+use App\Http\Controllers\Api\V1\DemoController;
+use App\Http\Controllers\Api\V1\Staff\AccessRequestController;
 use App\Http\Controllers\Api\V1\Staff\AccountController;
 use App\Http\Controllers\Api\V1\Staff\AuditLogController;
 use App\Http\Controllers\Api\V1\Staff\CardController as StaffCardController;
@@ -37,6 +40,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::post('auth/register/customer', [RegisterController::class, 'customer'])->middleware('throttle:registrations')->name('auth.register.customer');
     Route::post('auth/register/staff', [RegisterController::class, 'staff'])->middleware('throttle:registrations')->name('auth.register.staff');
     Route::post('auth/login', [AuthController::class, 'login'])->name('auth.login'); // throttled in LoginRequest
+
+    // Development only: the simulated SMS inbox (404 unless APP_ENV=local), and whether to link it.
+    Route::get('features', [DemoController::class, 'features'])->name('features');
+    Route::get('demo/sms-outbox', [DemoController::class, 'smsOutbox'])->middleware('local.only')->name('demo.sms-outbox');
 
     Route::middleware(['auth:sanctum', 'active'])->group(function () {
         // Reachable while must_change_password is set.
@@ -67,6 +74,14 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::post('staff/{staffUser}/block', [StaffController::class, 'block'])->name('staff.block');
                 Route::post('staff/{staffUser}/unblock', [StaffController::class, 'unblock'])->name('staff.unblock');
                 Route::put('staff/{staffUser}/username', [UsernameController::class, 'staff'])->name('staff.username');
+                // A staff login locked by wrong passwords: the administrator checks who is asking and restores it.
+                Route::post('staff/{staffUser}/restore-access', [StaffController::class, 'restoreAccess'])->name('staff.restore-access');
+
+                // Customers locked out of their login: requests raised by staff at the home branch.
+                Route::get('access-requests', [AdminAccessRequestController::class, 'index'])->name('access-requests.index');
+                Route::get('access-requests/{accessRequest}', [AdminAccessRequestController::class, 'show'])->whereNumber('accessRequest')->name('access-requests.show');
+                Route::post('access-requests/{accessRequest}/approve', [AdminAccessRequestController::class, 'approve'])->whereNumber('accessRequest')->name('access-requests.approve');
+                Route::post('access-requests/{accessRequest}/reject', [AdminAccessRequestController::class, 'reject'])->whereNumber('accessRequest')->name('access-requests.reject');
 
                 // Read-only, apart from renaming the customer's login. There is no admin password route.
                 Route::get('customers', [AdminCustomerController::class, 'index'])->name('customers.index');
@@ -125,6 +140,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                     Route::post('customers/{customer}/reject-kyc', [CustomerController::class, 'rejectKyc'])->can('manage', 'customer')->name('customers.reject-kyc');
                     Route::post('customers/{customer}/block', [CustomerController::class, 'block'])->can('manage', 'customer')->name('customers.block');
                     Route::post('customers/{customer}/unblock', [CustomerController::class, 'unblock'])->can('manage', 'customer')->name('customers.unblock');
+                    // A login locked by wrong passwords: identity checked here, approved by an administrator.
+                    Route::post('customers/{customer}/access-requests', [AccessRequestController::class, 'store'])->can('manage', 'customer')->name('customers.access-requests.store');
 
                     Route::get('account-types', [AccountController::class, 'types'])->name('account-types.index');
                     Route::post('accounts', [AccountController::class, 'store'])->name('accounts.store');

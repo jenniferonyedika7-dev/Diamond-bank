@@ -51,7 +51,7 @@ return [
     | second_minutes; after that, one more wrong -> the login is BLOCKED
     | (admins are never blocked: they get another second_minutes lock).
     | A correct password clears the count, and so does reset_hours without a
-    | wrong password. The login page has its own limits (LoginRequest).
+    | wrong password. The login page counts toward the same lockout.
     |
     */
 
@@ -61,5 +61,18 @@ return [
         'second_minutes' => (int) env('LOCKOUT_SECOND_MINUTES', 2),
         'reset_hours' => (int) env('LOCKOUT_RESET_HOURS', 24),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Temporary Passwords
+    |--------------------------------------------------------------------------
+    |
+    | How long a temporary password texted after an approved access request
+    | (or a staff restore) works. The user must change it at first login;
+    | after this many minutes it is refused and they must contact the bank.
+    |
+    */
+
+    'temp_password_expiry_minutes' => (int) env('TEMP_PASSWORD_EXPIRY_MINUTES', 1440),
 
 ];

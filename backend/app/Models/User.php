@@ -31,6 +31,7 @@ class User extends Authenticatable
         return [
             'password' => 'hashed',
             'must_change_password' => 'boolean',
+            'temp_password_expires_at' => 'datetime',
             'last_login' => 'datetime',
         ];
     }
@@ -51,6 +52,12 @@ class User extends Authenticatable
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'employee_id', 'employee_id');
+    }
+
+    /** Whether the user holds a temporary password whose lifetime is over. */
+    public function hasExpiredTemporaryPassword(): bool
+    {
+        return $this->temp_password_expires_at !== null && $this->temp_password_expires_at->isPast();
     }
 
     public function hasRole(string ...$roles): bool

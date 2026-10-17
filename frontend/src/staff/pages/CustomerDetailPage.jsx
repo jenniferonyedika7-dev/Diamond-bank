@@ -12,6 +12,8 @@ import { formatDate, formatDateTime } from '../../lib/format.js'
 import { formatMoney } from '../../lib/money.js'
 import { AccountStatusBadge, CardStatusBadge, KycBadge, LoginStatusBadge } from '../../components/StatusBadges.jsx'
 import TransactionList from '../../components/TransactionList.jsx'
+import { RECOVERY_LABELS } from '../../shared/access/labels.js'
+import AccessRequestDialog from '../AccessRequestDialog.jsx'
 
 const GENDER = { M: 'Male', F: 'Female' }
 
@@ -19,7 +21,7 @@ export default function CustomerDetailPage() {
   const { id } = useParams()
   const [customer, setCustomer] = useState(null)
   const [loadError, setLoadError] = useState('')
-  const [dialog, setDialog] = useState(null) // 'edit' | 'verify' | 'reject' | 'block' | 'unblock' | 'open'
+  const [dialog, setDialog] = useState(null) // 'edit' | 'verify' | 'reject' | 'block' | 'unblock' | 'locked' | 'access-request' | 'open'
   const [flash, setFlash] = useState('')
 
   const load = useCallback(
@@ -46,6 +48,9 @@ export default function CustomerDetailPage() {
 
   const post = (path, body) => api.post(`/api/v1/staff/customers/${customer.customer_id}/${path}`, body)
   const fullName = `${customer.first_name} ${customer.last_name}`
+  // LOCKOUT_BLOCKED or TEMP_PASSWORD_EXPIRED: only an access request (approved by an administrator) reopens the login.
+  const recovery = customer.login?.recovery
+  const pendingRequest = customer.pending_access_request
 
   return (
     <section className="space-y-6">
@@ -119,17 +124,25 @@ export default function CustomerDetailPage() {
                 <p className="mt-1 text-xs text-slate-500">
                   Last sign-in: {customer.login.last_login ? formatDateTime(customer.login.last_login) : 'never'}
                 </p>
-                <div className="mt-4">
+                {recovery && <p className="mt-2 text-sm font-medium text-amber-800">{RECOVERY_LABELS[recovery]}</p>}
+                {pendingRequest && (
+                  <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
+                    Access request pending since {formatDateTime(pendingRequest.requested_at)}
+                    {pendingRequest.requested_by_name && ` (raised by ${pendingRequest.requested_by_name})`}. Waiting for an administrator.
+                  </p>
+                )}
+                <div className="mt-4 flex flex-wrap gap-2">
                   {customer.login.status === 'ACTIVE' && (
                     <Button variant="secondary" onClick={() => setDialog('block')}>
                       Block login
                     </Button>
                   )}
                   {customer.login.status === 'BLOCKED' && (
-                    <Button variant="secondary" onClick={() => setDialog('unblock')}>
+                    <Button variant="secondary" onClick={() => setDialog(recovery === 'LOCKOUT_BLOCKED' ? 'locked' : 'unblock')}>
                       Unblock login
                     </Button>
                   )}
+                  {recovery && !pendingRequest && <Button onClick={() => setDialog('access-request')}>Raise access request</Button>}
                 </div>
               </>
             ) : (
@@ -258,6 +271,34 @@ export default function CustomerDetailPage() {
           busyLabel="Blocking…"
           onClose={() => setDialog(null)}
           onSubmit={async (reason) => done((await post('block', { reason })).data.message)}
+        />
+      )}
+      {dialog === 'locked' && (
+        <Modal title="Access request needed" onClose={() => setDialog(null)}>
+          <div className="space-y-3 text-sm text-slate-700">
+            <p>
+              <strong>{fullName}</strong>'s login was locked after too many wrong passwords, so it can't be unblocked directly.
+            </p>
+            <p>
+              Check the customer's identity, then raise an account access request. An administrator approves it, and the customer is told by
+              SMS.
+            </p>
+            {pendingRequest && <p className="font-medium text-amber-800">A request is already waiting for an administrator.</p>}
+          </div>
+          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="secondary" onClick={() => setDialog(null)}>
+              Close
+            </Button>
+            {!pendingRequest && <Button onClick={() => setDialog('access-request')}>Raise access request</Button>}
+          </div>
+        </Modal>
+      )}
+      {dialog === 'access-request' && (
+        <AccessRequestDialog
+          customer={customer}
+          expired={recovery === 'TEMP_PASSWORD_EXPIRED'}
+          onClose={() => setDialog(null)}
+          onDone={done}
         />
       )}
       {dialog === 'unblock' && (
