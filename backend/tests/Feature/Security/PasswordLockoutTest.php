@@ -206,10 +206,12 @@ it('takes the lock durations from config', function () {
 it('forgets the count and stage 24 hours after the last wrong password', function () {
     wrongTransfers(4);
     $this->travel(25)->hours();
+    actingFresh($this->me);   // a new session: the old one was logged out for inactivity
     wrongTransfers(4);   // would have locked at the 5th if the count had survived
 
     assertLocked(lockoutTransfer('wrong-password'), 1);
     $this->travel(25)->hours();
+    actingFresh($this->me);
     wrongTransfers(1);   // stage forgotten too: a plain wrong password, not the 2-minute lock
 });
 

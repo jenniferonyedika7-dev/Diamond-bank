@@ -26,3 +26,4 @@ require_once __DIR__.'/Feature/Customer/helpers.php';
 require_once __DIR__.'/Feature/loan_helpers.php';
 require_once __DIR__.'/Feature/session_helpers.php';
 require_once __DIR__.'/Feature/access_helpers.php';
+require_once __DIR__.'/Feature/clock_helpers.php';

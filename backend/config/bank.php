@@ -75,4 +75,18 @@ return [
 
     'temp_password_expiry_minutes' => (int) env('TEMP_PASSWORD_EXPIRY_MINUTES', 1440),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Idle Logout
+    |--------------------------------------------------------------------------
+    |
+    | A signed-in session with no user activity (clicks, typing, navigation,
+    | reported by the frontend to POST auth/activity) for this many minutes is
+    | logged out by the server (EnsureSessionNotIdle). Background requests
+    | never keep a session alive.
+    |
+    */
+
+    'idle_timeout_minutes' => (int) env('IDLE_TIMEOUT_MINUTES', 5),
+
 ];

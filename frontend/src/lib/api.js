@@ -21,6 +21,7 @@ export function ensureCsrf() {
 // AuthContext registers these; they only update auth state; the route guards redirect.
 let handlers = {
   onUnauthenticated: () => {},
+  onIdleLogout: () => {},
   onMustChangePassword: () => {},
 }
 
@@ -45,7 +46,12 @@ api.interceptors.response.use(
 
     // A 401 from login means wrong credentials, not an expired session.
     if (response.status === 401 && !config.url?.endsWith('/auth/login')) {
-      handlers.onUnauthenticated()
+      if (response.data?.data?.idle_logout === true) {
+        // Logged out by the server after the idle timeout: "You were logged out after 5 minutes of inactivity."
+        handlers.onIdleLogout(response.data.message)
+      } else {
+        handlers.onUnauthenticated()
+      }
     }
 
     if (response.status === 403) {

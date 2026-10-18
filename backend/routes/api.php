@@ -45,9 +45,13 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::get('features', [DemoController::class, 'features'])->name('features');
     Route::get('demo/sms-outbox', [DemoController::class, 'smsOutbox'])->middleware('local.only')->name('demo.sms-outbox');
 
-    Route::middleware(['auth:sanctum', 'active'])->group(function () {
+    // 'idle': no user activity for bank.idle_timeout_minutes -> logged out (EnsureSessionNotIdle).
+    Route::middleware(['auth:sanctum', 'active', 'idle'])->group(function () {
         // Reachable while must_change_password is set.
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+        // Real user activity (clicks, typing, navigation) keeps the session alive; nothing else does.
+        Route::post('auth/activity', [AuthController::class, 'activity'])->middleware('throttle:60,1')->name('auth.activity');
+        Route::get('auth/session', [AuthController::class, 'session'])->name('auth.session');
         Route::post('auth/change-password', [AuthController::class, 'changePassword'])->middleware(['throttle:password-actions', 'password.lockout'])->name('auth.change-password');
 
         Route::middleware('password.changed')->group(function () {

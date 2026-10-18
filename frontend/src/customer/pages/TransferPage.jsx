@@ -12,9 +12,9 @@ import KycNotice from '../KycNotice.jsx'
 const STEPS = { details: 'Step 1 of 3: Transfer details', review: 'Step 2 of 3: Review and confirm', result: 'Step 3 of 3: Result' }
 const AMOUNT = /^\d+(\.\d{1,2})?$/
 
-/** How much can leave the account without going below its minimum balance. */
+/** How much can leave the account: above its minimum balance, and within what remains of today's transfer limit. */
 function available(account) {
-  return Math.max(Number(account.balance) - Number(account.minimum_balance), 0)
+  return Math.max(Math.min(Number(account.balance) - Number(account.minimum_balance), Number(account.remaining_today)), 0)
 }
 
 export default function TransferPage() {
@@ -117,8 +117,10 @@ export default function TransferPage() {
         setFieldErrors(errors)
         setStep('details')
       } else if (err.response?.status === 422) {
+        // Refused by the bank (e.g. insufficient funds, or over today's transfer limit, with what remains).
         setResult({ ok: false, message: getErrorMessage(err) })
         setStep('result')
+        reload()
       } else {
         setError(getErrorMessage(err))
       }
@@ -149,7 +151,12 @@ export default function TransferPage() {
                 value={form.from_account_number}
                 onChange={update}
                 error={fieldErrors.from_account_number}
-                hint={source ? `You can send up to ${formatMoney(available(source))} (keeps the ${formatMoney(source.minimum_balance)} minimum).` : undefined}
+                hint={
+                  source
+                    ? `Remaining today: ${formatMoney(source.remaining_today)} (daily limit ${formatMoney(source.daily_transfer_limit)}). ` +
+                      `You can send up to ${formatMoney(available(source))} (keeps the ${formatMoney(source.minimum_balance)} minimum).`
+                    : undefined
+                }
               >
                 {accounts.map((a) => (
                   <option key={a.account_number} value={a.account_number} disabled={a.status !== 'ACTIVE'}>

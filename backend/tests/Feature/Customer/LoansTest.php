@@ -239,6 +239,7 @@ it('lists and shows only my loans, with the schedule and the rejection reason', 
         ->assertJsonMissingPath('data.tin');
 
     $this->travel(40)->days();
+    actingFresh($this->me);   // a new session: the old one was logged out for inactivity
     $this->getJson("/api/v1/customer/loans/{$mine->loan_id}")
         ->assertJsonPath('data.schedule.0.display_status', 'OVERDUE')
         ->assertJsonPath('data.schedule.1.display_status', 'DUE');

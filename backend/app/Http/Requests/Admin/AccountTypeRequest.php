@@ -25,6 +25,8 @@ class AccountTypeRequest extends FormRequest
             ],
             'interest_rate' => ['required', 'numeric', 'decimal:0,2', 'between:0,100'],
             'minimum_balance' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:9999999999999.99'],
+            // Per source account, per day (sp_transfer_funds).
+            'daily_transfer_limit' => ['required', 'numeric', 'decimal:0,2', 'gt:0', 'max:9999999999999.99'],
         ];
     }
 }

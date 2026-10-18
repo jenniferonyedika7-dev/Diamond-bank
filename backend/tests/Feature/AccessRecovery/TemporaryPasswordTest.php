@@ -107,6 +107,8 @@ it('lets staff raise a new request for an expired temporary password, which the 
 });
 
 it('refuses change-password once the temporary password has expired', function () {
+    // A session kept active (signed in) past the expiry: idle logout would otherwise end it first.
+    config(['bank.idle_timeout_minutes' => config('bank.temp_password_expiry_minutes') + 60]);
     $temporary = approveReset();
     attemptLogin($this->login->user_name, $temporary)->assertOk();
     $this->travel(config('bank.temp_password_expiry_minutes') + 1)->minutes();

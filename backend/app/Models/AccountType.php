@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 
-#[Fillable(['type_name', 'interest_rate', 'minimum_balance'])]
+#[Fillable(['type_name', 'interest_rate', 'minimum_balance', 'daily_transfer_limit'])]
 class AccountType extends Model
 {
     protected $table = 'account_type';
@@ -19,6 +19,7 @@ class AccountType extends Model
         return [
             'interest_rate' => 'decimal:2',
             'minimum_balance' => 'decimal:2',
+            'daily_transfer_limit' => 'decimal:2',
         ];
     }
 }

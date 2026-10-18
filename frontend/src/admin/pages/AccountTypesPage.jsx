@@ -6,19 +6,29 @@ const config = {
   endpoint: '/api/v1/admin/account-types',
   idKey: 'account_type_id',
   title: 'Account types',
-  description: 'The kinds of account customers can open, with their interest rate and minimum balance.',
+  description: 'The kinds of account customers can open, with their interest rate, minimum balance and daily transfer limit.',
   singular: 'account type',
   emptyText: 'No account types yet. Add your first account type.',
   columns: [
     { key: 'type_name', label: 'Name' },
     { key: 'interest_rate', label: 'Interest rate', align: 'right', render: (row) => formatPercent(row.interest_rate) },
     { key: 'minimum_balance', label: 'Minimum balance', align: 'right', render: (row) => formatMoney(row.minimum_balance) },
+    { key: 'daily_transfer_limit', label: 'Daily transfer limit', align: 'right', render: (row) => formatMoney(row.daily_transfer_limit) },
     { key: 'accounts_count', label: 'Accounts', align: 'right' },
   ],
   fields: [
     { name: 'type_name', label: 'Name', maxLength: 50, hint: 'For example, SAVINGS.' },
     { name: 'interest_rate', label: 'Interest rate (% per year)', type: 'number', inputMode: 'decimal', min: 0, max: 100, step: '0.01', hint: '0 to 100, up to 2 decimal places.' },
     { name: 'minimum_balance', label: 'Minimum balance (GMD)', type: 'number', inputMode: 'decimal', min: 0, step: '0.01' },
+    {
+      name: 'daily_transfer_limit',
+      label: 'Daily transfer limit (GMD)',
+      type: 'number',
+      inputMode: 'decimal',
+      min: 0.01,
+      step: '0.01',
+      hint: 'The most each account of this type can transfer out per day (00:00–23:59, Banjul time).',
+    },
   ],
 }
 

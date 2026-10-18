@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Customer;
 
 use App\Http\Responses\ApiResponse;
+use App\Support\DailyTransferLimit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,8 +24,15 @@ class OverviewController extends CustomerAreaController
             ->where('account.customer_id', $customerId)
             ->orderBy('account.opened_date')
             ->orderBy('account.account_id')
-            ->get(['account.account_number', 'account_type.type_name', 'account_type.minimum_balance',
-                'account.balance', 'account.currency_code', 'account.status']);
+            ->get(['account.account_id', 'account.account_number', 'account_type.type_name', 'account_type.minimum_balance',
+                'account_type.daily_transfer_limit', 'account.balance', 'account.currency_code', 'account.status'])
+            // What may still be transferred out today (sp_transfer_funds enforces it).
+            ->map(function ($account) {
+                $account->remaining_today = DailyTransferLimit::remaining($account->account_id, $account->daily_transfer_limit);
+                unset($account->account_id);
+
+                return $account;
+            });
 
         $totals = DB::table('account')
             ->where('customer_id', $customerId)

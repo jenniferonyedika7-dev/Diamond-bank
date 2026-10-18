@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Actions\Auth\ChangePassword;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\EnsureSessionNotIdle;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Responses\ApiResponse;
@@ -83,6 +84,7 @@ class AuthController extends Controller
 
         Auth::guard('web')->login($user);
         $request->session()->regenerate();
+        EnsureSessionNotIdle::recordActivity($request);
 
         $user->last_login = now();
         if (Hash::needsRehash($user->password)) {
@@ -105,6 +107,20 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return ApiResponse::success('Logged out.');
+    }
+
+    /** The frontend reports a click, keypress or navigation: the idle clock starts again. */
+    public function activity(Request $request): JsonResponse
+    {
+        EnsureSessionNotIdle::recordActivity($request);
+
+        return ApiResponse::success('Activity recorded.', ['expires_in' => EnsureSessionNotIdle::expiresIn($request)]);
+    }
+
+    /** Seconds until an idle logout, without counting as activity. */
+    public function session(Request $request): JsonResponse
+    {
+        return ApiResponse::success('Session.', ['expires_in' => EnsureSessionNotIdle::expiresIn($request)]);
     }
 
     public function me(Request $request): JsonResponse
@@ -149,6 +165,7 @@ class AuthController extends Controller
             'role' => $user->role->role_name,
             'status' => $user->status,
             'must_change_password' => $user->must_change_password,
+            'idle_timeout_minutes' => (int) config('bank.idle_timeout_minutes'),
             ...($user->customer ? ['kyc_status' => $user->customer->kyc_status] : []),
             ...($user->employee ? ['full_name' => $user->employee->full_name] : []),
         ];

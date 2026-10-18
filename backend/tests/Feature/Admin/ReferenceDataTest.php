@@ -10,13 +10,13 @@ beforeEach(function () {
 });
 
 it('creates, updates and deletes an account type with audit rows', function () {
-    $id = $this->postJson('/api/v1/admin/account-types', ['type_name' => 'SAVINGS', 'interest_rate' => '3.5', 'minimum_balance' => 100])
+    $id = $this->postJson('/api/v1/admin/account-types', ['type_name' => 'SAVINGS', 'interest_rate' => '3.5', 'minimum_balance' => 100, 'daily_transfer_limit' => 100000])
         ->assertCreated()
         // Names are stored in Title Case.
         ->assertJson(['data' => ['type_name' => 'Savings', 'interest_rate' => '3.50', 'minimum_balance' => '100.00']])
         ->json('data.account_type_id');
 
-    $this->putJson("/api/v1/admin/account-types/{$id}", ['type_name' => 'SAVINGS', 'interest_rate' => 4, 'minimum_balance' => 50])
+    $this->putJson("/api/v1/admin/account-types/{$id}", ['type_name' => 'SAVINGS', 'interest_rate' => 4, 'minimum_balance' => 50, 'daily_transfer_limit' => 100000])
         ->assertOk()
         ->assertJsonPath('data.interest_rate', '4.00');
 
@@ -26,7 +26,7 @@ it('creates, updates and deletes an account type with audit rows', function () {
 });
 
 it('validates account type numbers', function (array $payload, string $field) {
-    $this->postJson('/api/v1/admin/account-types', array_merge(['type_name' => 'X', 'interest_rate' => 1, 'minimum_balance' => 0], $payload))
+    $this->postJson('/api/v1/admin/account-types', array_merge(['type_name' => 'X', 'interest_rate' => 1, 'minimum_balance' => 0, 'daily_transfer_limit' => 100000], $payload))
         ->assertUnprocessable()
         ->assertJsonValidationErrors($field);
 })->with([
@@ -74,7 +74,7 @@ it('stores reference names in Title Case', function () {
         ->assertCreated()->assertJsonPath('data.type_name', 'Debit Gold');
     $this->postJson('/api/v1/admin/departments', ['department_name' => 'CUSTOMER SERVICE'])
         ->assertCreated()->assertJsonPath('data.department_name', 'Customer Service');
-    $this->postJson('/api/v1/admin/account-types', ['type_name' => 'fixed deposit', 'interest_rate' => 5, 'minimum_balance' => 0])
+    $this->postJson('/api/v1/admin/account-types', ['type_name' => 'fixed deposit', 'interest_rate' => 5, 'minimum_balance' => 0, 'daily_transfer_limit' => 100000])
         ->assertCreated()->assertJsonPath('data.type_name', 'Fixed Deposit');
 
     // A different casing of an existing name is the same name.

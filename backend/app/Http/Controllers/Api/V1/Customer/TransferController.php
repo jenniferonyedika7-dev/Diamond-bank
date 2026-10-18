@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Api\V1\Customer;
 
+use App\Exceptions\ProcedureFailed;
 use App\Http\Requests\Customer\TransferRequest;
 use App\Http\Responses\ApiResponse;
+use App\Support\DailyTransferLimit;
 use App\Support\MaskedName;
 use App\Support\StoredProcedure;
 use Illuminate\Http\JsonResponse;
@@ -37,6 +39,8 @@ class TransferController extends CustomerAreaController
     /**
      * Confirms the password, checks the source is the customer's own account,
      * then lets sp_transfer_funds move the money (channel ONLINE, performer = this user).
+     * Over the daily transfer limit the procedure refuses (SQLSTATE 45002) and has
+     * rolled back; the refusal is audited afterwards, outside any transaction.
      */
     public function store(TransferRequest $request): JsonResponse
     {
@@ -54,15 +58,30 @@ class TransferController extends CustomerAreaController
             throw ValidationException::withMessages(['from_account_number' => 'Choose one of your own accounts.']);
         }
 
-        $result = StoredProcedure::call('sp_transfer_funds', [
-            $from->account_id,
-            $data['to_account_number'],
-            // As sent, so the procedure sees the exact amount rather than a float.
-            (string) $request->input('amount'),
-            $data['description'] ?? null,
-            'ONLINE',
-            $user->user_id,
-        ]);
+        try {
+            $result = StoredProcedure::call('sp_transfer_funds', [
+                $from->account_id,
+                $data['to_account_number'],
+                // As sent, so the procedure sees the exact amount rather than a float.
+                (string) $request->input('amount'),
+                $data['description'] ?? null,
+                'ONLINE',
+                $user->user_id,
+            ]);
+        } catch (ProcedureFailed $e) {
+            if ($e->sqlState === '45002') {
+                $limit = (string) DB::table('account_type')->where('account_type_id', $from->account_type_id)->value('daily_transfer_limit');
+                $this->audit->log('TRANSFER_LIMIT_REFUSED', 'account', $from->account_id, [
+                    'from_account_number' => $from->account_number,
+                    'to_account_number' => $data['to_account_number'],
+                    'amount' => (string) $request->input('amount'),
+                    'daily_limit' => $limit,
+                    'sent_today' => DailyTransferLimit::sentToday($from->account_id),
+                    'remaining_today' => DailyTransferLimit::remaining($from->account_id, $limit),
+                ]);
+            }
+            throw $e;
+        }
 
         $recipient = $this->recipient($data['to_account_number'], activeOnly: false);
 

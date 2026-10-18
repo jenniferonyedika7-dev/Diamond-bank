@@ -38,7 +38,17 @@ class AccountTypeController extends AdminController
         DB::transaction(function () use ($request, $accountType) {
             $before = $this->snapshot($accountType);
             $accountType->update($request->validated());
-            $this->audit->log('ACCOUNT_TYPE_UPDATED', 'account_type', $accountType->account_type_id, ['before' => $before, 'after' => $this->snapshot($accountType->refresh())]);
+            $after = $this->snapshot($accountType->refresh());
+            $this->audit->log('ACCOUNT_TYPE_UPDATED', 'account_type', $accountType->account_type_id, ['before' => $before, 'after' => $after]);
+
+            // A change to the daily transfer limit gets its own row, only when the value really changes.
+            if (bccomp($before['daily_transfer_limit'], $after['daily_transfer_limit'], 2) !== 0) {
+                $this->audit->log('ACCOUNT_TYPE_LIMIT_CHANGED', 'account_type', $accountType->account_type_id, [
+                    'type_name' => $accountType->type_name,
+                    'old_value' => $before['daily_transfer_limit'],
+                    'new_value' => $after['daily_transfer_limit'],
+                ]);
+            }
         });
 
         return ApiResponse::success('Account type updated.', $accountType);

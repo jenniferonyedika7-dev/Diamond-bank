@@ -4,6 +4,7 @@ use App\Exceptions\ProcedureFailed;
 use App\Http\Middleware\EnsureLocalEnvironment;
 use App\Http\Middleware\EnsurePasswordChanged;
 use App\Http\Middleware\EnsurePasswordNotLocked;
+use App\Http\Middleware\EnsureSessionNotIdle;
 use App\Http\Middleware\EnsureStaffHasBranch;
 use App\Http\Middleware\EnsureUserHasRole;
 use App\Http\Middleware\EnsureUserIsActive;
@@ -35,12 +36,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'staff.branch' => EnsureStaffHasBranch::class,
             'password.lockout' => EnsurePasswordNotLocked::class,
             'local.only' => EnsureLocalEnvironment::class,
+            'idle' => EnsureSessionNotIdle::class,
         ]);
 
         // Check status, password, role and branch before route-model binding, so
         // a user without access gets 403 on /admin/branches/999 rather than a 404
         // that reveals whether the record exists.
-        foreach ([EnsureUserIsActive::class, EnsurePasswordChanged::class, EnsureUserHasRole::class, EnsureStaffHasBranch::class] as $middlewareClass) {
+        foreach ([EnsureUserIsActive::class, EnsureSessionNotIdle::class, EnsurePasswordChanged::class, EnsureUserHasRole::class, EnsureStaffHasBranch::class] as $middlewareClass) {
             $middleware->prependToPriorityList(SubstituteBindings::class, $middlewareClass);
         }
     })

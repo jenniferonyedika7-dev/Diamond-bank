@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
+import IdleWatcher from '../components/IdleWatcher.jsx'
 import { api, ensureCsrf, setAuthHandlers } from '../lib/api.js'
+import { onLoggedOut, shareLoggedOut } from '../lib/idle.js'
 import { AuthContext } from './useAuth.js'
 
 /**
@@ -39,6 +41,16 @@ export function AuthProvider({ children }) {
     },
     [navigate, setGuest],
   )
+  // Logged out for inactivity: show why, and take the other open tabs to the login page too.
+  const handleIdleLogout = useCallback(
+    (message) => {
+      shareLoggedOut(message)
+      handleUnauthenticated(message)
+    },
+    [handleUnauthenticated],
+  )
+  // Another tab logged out (idle, with its message; or Log out, without one): this tab is logged out too.
+  useEffect(() => onLoggedOut((message) => handleUnauthenticated(message)), [handleUnauthenticated])
   const setUser = useCallback((user) => setState({ status: 'authenticated', user }), [])
 
   // /auth/me sits behind the password.changed middleware, so a user who must
@@ -60,10 +72,11 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     setAuthHandlers({
       onUnauthenticated: handleUnauthenticated,
+      onIdleLogout: handleIdleLogout,
       onMustChangePassword: markMustChangePassword,
     })
     loadMe().then((next) => next && setState(next))
-  }, [markMustChangePassword, handleUnauthenticated])
+  }, [markMustChangePassword, handleUnauthenticated, handleIdleLogout])
 
   const login = useCallback(
     async (userName, password) => {
@@ -81,6 +94,7 @@ export function AuthProvider({ children }) {
     } catch {
       // Already logged out on the server (expired session etc.): clear locally anyway.
     }
+    shareLoggedOut()
     setGuest()
     navigate('/login', { replace: true })
   }, [navigate, setGuest])
@@ -97,5 +111,10 @@ export function AuthProvider({ children }) {
     [state, setUser, login, logout, fetchMe],
   )
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {state.status === 'authenticated' && <IdleWatcher />}
+    </AuthContext.Provider>
+  )
 }
