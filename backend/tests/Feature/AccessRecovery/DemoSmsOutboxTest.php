@@ -24,7 +24,7 @@ it('is hidden outside the local environment', function () {
 
 it('shows the last 24 hours of texts, newest first, when local', function () {
     $this->app['env'] = 'local';
-    $customer = bankCustomer(['first_name' => 'Awa', 'last_name' => 'Jallow', 'phone' => '7000123']);
+    $customer = bankCustomer(['first_name' => 'Awa', 'last_name' => 'Jallow', 'phone' => '870000123']);
     $staff = User::factory()->staff()->create();
     $sms = app(SmsSender::class);
 
@@ -38,12 +38,12 @@ it('shows the last 24 hours of texts, newest first, when local', function () {
     $messages = $this->getJson('/api/v1/demo/sms-outbox')->assertOk()->json('data');
 
     expect(array_column($messages, 'message'))->toBe(['Diamond Bank: second', 'Diamond Bank: first'])
-        ->and($messages[1])->toMatchArray(['phone' => '7000123', 'recipient_name' => 'Awa Jallow'])
+        ->and($messages[1])->toMatchArray(['phone' => '870000123', 'recipient_name' => 'Awa Jallow'])
         ->and($messages[0]['recipient_name'])->toBe($staff->employee->full_name);
 });
 
 it('audits every text without its content', function () {
-    $customer = bankCustomer(['phone' => '7009876']);
+    $customer = bankCustomer(['phone' => '870009876']);
     app(SmsSender::class)->send($customer, 'Diamond Bank: secret 123', 'TEST');
 
     $this->assertDatabaseHas('audit_log', ['action_type' => 'DEMO_SMS_SENT', 'table_affected' => 'demo_sms_outbox']);

@@ -108,7 +108,7 @@ export default function CustomerDetailPage() {
                     <td className="px-5 py-3">
                       <AccountStatusBadge status={a.status} />
                     </td>
-                    <td className="px-5 py-3 text-right font-medium tabular-nums text-slate-900">{formatMoney(a.balance)}</td>
+                    <td className="px-5 py-3 text-right font-medium tabular-nums text-slate-900">{formatMoney(a.balance, a.currency_code)}</td>
                   </tr>
                 ))}
               </tbody>

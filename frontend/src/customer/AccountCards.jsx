@@ -15,7 +15,7 @@ export default function AccountCards({ accounts }) {
               <span className="text-sm font-medium text-slate-700">{a.type_name}</span>
               <AccountStatusBadge status={a.status} />
             </div>
-            <p className="mt-3 text-3xl font-semibold tabular-nums tracking-tight text-navy-900">{formatMoney(a.balance)}</p>
+            <p className="mt-3 text-3xl font-semibold tabular-nums tracking-tight text-navy-900">{formatMoney(a.balance, a.currency_code)}</p>
             <p className="mt-1 font-mono text-sm text-slate-500">{a.account_number}</p>
           </Link>
         </li>

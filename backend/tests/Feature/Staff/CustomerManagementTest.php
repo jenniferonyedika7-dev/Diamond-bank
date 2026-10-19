@@ -79,7 +79,7 @@ it('edits a customer with audit, and locks the national ID after KYC', function 
     $payload = fn (array $overrides = []) => array_merge([
         'first_name' => $customer->first_name, 'last_name' => $customer->last_name,
         'date_of_birth' => '1990-02-03', 'gender' => 'F', 'national_id' => $customer->national_id,
-        'phone' => '7778888', 'email' => $customer->email, 'branch_id' => $customer->branch_id,
+        'phone' => '877788888', 'email' => $customer->email, 'branch_id' => $customer->branch_id,
     ], $overrides);
 
     $this->putJson("/api/v1/staff/customers/{$customer->customer_id}", $payload(['national_id' => 'NEW-ID-1']))->assertOk();
@@ -88,7 +88,7 @@ it('edits a customer with audit, and locks the national ID after KYC', function 
     $audit = DB::table('audit_log')->where('action_type', 'CUSTOMER_UPDATED')->first();
     $details = json_decode($audit->details, true);
     expect($details['before']['phone'])->toBe($customer->phone)
-        ->and($details['after']['phone'])->toBe('7778888');
+        ->and($details['after']['phone'])->toBe('877788888');
 
     DB::table('customer')->where('customer_id', $customer->customer_id)->update(['kyc_status' => 'VERIFIED']);
     $customer->refresh();

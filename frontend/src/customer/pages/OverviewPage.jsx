@@ -23,7 +23,7 @@ export default function OverviewPage() {
               <p className="text-sm text-navy-100">Total balance</p>
               {totals.map((t) => (
                 <p key={t.currency_code} className="mt-1 text-4xl font-semibold tabular-nums tracking-tight">
-                  {formatMoney(t.balance)}
+                  {formatMoney(t.balance, t.currency_code)}
                 </p>
               ))}
             </div>

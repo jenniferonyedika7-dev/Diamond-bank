@@ -5,7 +5,7 @@ use Tests\TestCase;
 
 /*
 | Existing PHPUnit test classes keep running unchanged. Pest tests under
-| Feature/Auth, Admin, Staff, Customer, Security, Migrations and AccessRecovery use bank_db_testing (see phpunit.xml), truncated and re-seeded
+| Feature/Auth, Admin, Staff, Customer, Security, Migrations, AccessRecovery and Validation use bank_db_testing (see phpunit.xml), truncated and re-seeded
 | (roles, transaction types, admin) before every test. They send the SPA's
 | Referer so Sanctum treats them as stateful (session cookie) requests.
 */
@@ -19,7 +19,7 @@ pest()->extend(TestCase::class)
             'Accept' => 'application/json',
         ]);
     })
-    ->in('Feature/Auth', 'Feature/Admin', 'Feature/Staff', 'Feature/Customer', 'Feature/Security', 'Feature/Migrations', 'Feature/AccessRecovery');
+    ->in('Feature/Auth', 'Feature/Admin', 'Feature/Staff', 'Feature/Customer', 'Feature/Security', 'Feature/Migrations', 'Feature/AccessRecovery', 'Feature/Validation');
 
 require_once __DIR__.'/Feature/Staff/helpers.php';
 require_once __DIR__.'/Feature/Customer/helpers.php';

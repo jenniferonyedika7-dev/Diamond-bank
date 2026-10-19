@@ -47,7 +47,7 @@ it('shows the same detail and statement as staff', function () {
 it('approves and disburses: balance, transaction, schedule and both approvals recorded', function () {
     $this->postJson("/api/v1/admin/loans/{$this->loan->loan_id}/approve")
         ->assertOk()
-        ->assertJsonPath('message', "Loan approved. D 10,000.00 was paid into account {$this->account->account_number}.")
+        ->assertJsonPath('message', "Loan approved. GMD 10,000.00 was paid into account {$this->account->account_number}.")
         ->assertJsonPath('data.balance_after', '11500.00');
 
     expect(balanceOfAccount($this->account))->toBe('11500.00')

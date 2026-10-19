@@ -15,7 +15,7 @@ use Illuminate\Testing\TestResponse;
 beforeEach(function () {
     $this->admin = adminUser();
     $this->staff = staffAtBranch();
-    Employee::query()->whereKey($this->staff->employee_id)->update(['phone' => '7123456']);
+    Employee::query()->whereKey($this->staff->employee_id)->update(['phone' => '871234567']);
 });
 
 function restoreAccess(int $userId, array $overrides = []): TestResponse
@@ -41,7 +41,7 @@ it('restores a locked-out staff member with a temporary password texted to their
     expect($staff->status)->toBe('ACTIVE')
         ->and($staff->must_change_password)->toBeTrue()
         ->and($staff->temp_password_expires_at->toDateTimeString())->toBe(now()->addMinutes(config('bank.temp_password_expiry_minutes'))->toDateTimeString())
-        ->and(DB::table('demo_sms_outbox')->where('user_id', $staff->user_id)->value('phone'))->toBe('7123456');
+        ->and(DB::table('demo_sms_outbox')->where('user_id', $staff->user_id)->value('phone'))->toBe('871234567');
 
     $audit = DB::table('audit_log')->where('action_type', 'STAFF_ACCESS_RESTORED')->sole();
     expect($audit->user_id)->toBe($this->admin->user_id)

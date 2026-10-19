@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Staff;
 
+use App\Rules\GambianMobile;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -19,7 +20,7 @@ class UpdateCustomerRequest extends FormRequest
             'date_of_birth' => ['required', 'date', 'before_or_equal:'.now()->subYears(18)->toDateString()],
             'gender' => ['required', 'in:M,F'],
             'national_id' => ['required', 'string', 'max:30', Rule::unique('customer', 'national_id')->ignore($customerId, 'customer_id')],
-            'phone' => ['required', 'string', 'max:20'],
+            'phone' => ['required', 'string', new GambianMobile],
             'email' => ['required', 'email', 'max:150', Rule::unique('customer', 'email')->ignore($customerId, 'customer_id')],
             'branch_id' => ['required', 'integer', 'exists:branch,branch_id'],
         ];
@@ -43,5 +44,10 @@ class UpdateCustomerRequest extends FormRequest
                 }
             },
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->merge(['phone' => GambianMobile::normalize($this->input('phone'))]);
     }
 }

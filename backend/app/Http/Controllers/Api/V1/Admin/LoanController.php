@@ -57,7 +57,7 @@ class LoanController extends AdminController
         $result = StoredProcedure::call('sp_disburse_loan', [$loan->loan_id, json_encode($schedule), $request->user()->user_id]);
 
         return ApiResponse::success(
-            'Loan approved. '.Money::dalasi((string) $result->amount)." was paid into account {$result->account_number}.",
+            'Loan approved. '.Money::gmd((string) $result->amount)." was paid into account {$result->account_number}.",
             $result,
         );
     }

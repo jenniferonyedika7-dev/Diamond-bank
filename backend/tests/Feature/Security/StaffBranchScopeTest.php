@@ -21,7 +21,7 @@ function staffEditPayload(object $customer, array $overrides = []): array
     return array_merge([
         'first_name' => $customer->first_name, 'last_name' => $customer->last_name,
         'date_of_birth' => '1990-02-03', 'gender' => 'F', 'national_id' => $customer->national_id,
-        'phone' => '7778888', 'email' => $customer->email, 'branch_id' => $customer->branch_id,
+        'phone' => '877788888', 'email' => $customer->email, 'branch_id' => $customer->branch_id,
     ], $overrides);
 }
 

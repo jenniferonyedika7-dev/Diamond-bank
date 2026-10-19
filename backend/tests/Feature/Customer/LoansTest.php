@@ -5,7 +5,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 beforeEach(function () {
-    $this->me = bankCustomer(['first_name' => 'Awa', 'last_name' => 'Jallow', 'phone' => '7700001', 'email' => 'awa@example.test']);
+    $this->me = bankCustomer(['first_name' => 'Awa', 'last_name' => 'Jallow', 'phone' => '877000001', 'email' => 'awa@example.test']);
     $this->account = accountFor($this->me, '1500.00');
     loanType();
     $this->actingAs($this->me);
@@ -43,7 +43,7 @@ it('shows the profile contact details, active accounts and limits on the apply f
 
     $this->getJson('/api/v1/customer/loans/apply-context')
         ->assertOk()
-        ->assertJsonPath('data.contact.phone', '7700001')
+        ->assertJsonPath('data.contact.phone', '877000001')
         ->assertJsonPath('data.contact.email', 'awa@example.test')
         ->assertJsonPath('data.has_open_loan', false)
         ->assertJsonCount(1, 'data.accounts')
@@ -86,7 +86,7 @@ it('applies for a loan: loan, application snapshot, guarantor and audit', functi
         'employer_name' => 'Gambia Ports Authority',
         'employer_phone' => '4227266',
         'business_name' => null, // not an EMPLOYED field, so not stored
-        'contact_phone' => '7700001',
+        'contact_phone' => '877000001',
         'contact_email' => 'awa@example.test',
     ]);
     expect(DB::table('loan_guarantor')->sole())->toMatchObject(['loan_id' => $loan->loan_id, 'full_name' => 'Fatou Sowe', 'occupation' => 'Teacher']);
@@ -111,8 +111,8 @@ it('refuses amounts and terms outside the limits with clear messages', function 
 
     expect(DB::table('loan')->count())->toBe(0);
 })->with([
-    'below the minimum' => [['amount' => '999.99'], 'amount', 'The minimum loan is D 1,000.00.'],
-    'above the maximum' => [['amount' => '5000000.01'], 'amount', 'The maximum loan is D 5,000,000.00.'],
+    'below the minimum' => [['amount' => '999.99'], 'amount', 'The minimum loan is GMD 1,000.00.'],
+    'above the maximum' => [['amount' => '5000000.01'], 'amount', 'The maximum loan is GMD 5,000,000.00.'],
     'three decimals' => [['amount' => '1000.001'], 'amount', 'Amounts can have at most 2 decimal places.'],
     'zero months' => [['term_months' => 0], 'term_months', 'Loans can run for 1 to 12 months.'],
     'thirteen months' => [['term_months' => 13], 'term_months', 'Loans can run for 1 to 12 months.'],
@@ -168,7 +168,7 @@ it('requires a complete, valid guarantor who is not the applicant', function (ar
     'no address' => [['address' => ''], 'guarantor.address'],
     'bad phone' => [['phone' => 'call me'], 'guarantor.phone'],
     'bad email' => [['email' => 'not-an-email'], 'guarantor.email'],
-    'my own phone' => [['phone' => '770 0001'], 'guarantor.phone'],
+    'my own phone' => [['phone' => '87 700 0001'], 'guarantor.phone'],
     'my own email' => [['email' => 'AWA@example.test'], 'guarantor.email'],
 ]);
 

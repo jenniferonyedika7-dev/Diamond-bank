@@ -20,7 +20,7 @@ it('backfills purpose and used_at for rows sent before the columns existed', fun
     $unused = bankCustomer();
     $sentAt = now()->subHours(3)->startOfSecond();
     $insert = fn ($user, string $text, string $at) => DB::table('demo_sms_outbox')->insertGetId([
-        'user_id' => $user->user_id, 'phone' => '7000000', 'message' => Crypt::encryptString($text), 'sent_at' => $at,
+        'user_id' => $user->user_id, 'phone' => '870000000', 'message' => Crypt::encryptString($text), 'sent_at' => $at,
     ], 'demo_sms_id');
     $audit = fn (string $action, string $table, int $record, ?array $details, string $at) => DB::table('audit_log')->insert([
         'action_type' => $action, 'table_affected' => $table, 'record_id' => $record,

@@ -20,7 +20,7 @@ class CustomerFactory extends Factory
             'date_of_birth' => fake()->dateTimeBetween('-70 years', '-18 years')->format('Y-m-d'),
             'gender' => fake()->randomElement(['M', 'F']),
             'national_id' => fake()->unique()->bothify('NID-########'),
-            'phone' => fake()->numerify('#######'),
+            'phone' => fake()->randomElement(['83', '86', '87']).fake()->numerify('#######'),
             'email' => fake()->unique()->safeEmail(),
             'kyc_status' => 'PENDING',
         ];

@@ -7,6 +7,8 @@ import FormField from '../components/FormField.jsx'
 import PasswordRules from '../components/PasswordRules.jsx'
 import Spinner from '../components/Spinner.jsx'
 import { api, ensureCsrf, getErrorMessage, getFieldErrors } from '../lib/api.js'
+import { clearFieldError } from '../lib/forms.js'
+import { isGambianMobile, PHONE_MESSAGE, phoneInputProps } from '../lib/phone.js'
 
 const EMPTY = {
   first_name: '',
@@ -51,12 +53,22 @@ export default function RegisterCustomerPage() {
 
   function update(event) {
     setForm((prev) => ({ ...prev, [event.target.name]: event.target.value }))
+    setFieldErrors((prev) => clearFieldError(prev, event.target.name))
+  }
+
+  function setPhone(phone) {
+    setForm((prev) => ({ ...prev, phone }))
+    setFieldErrors((prev) => clearFieldError(prev, 'phone'))
   }
 
   async function handleSubmit(event) {
     event.preventDefault()
-    setSubmitting(true)
     setError('')
+    if (!isGambianMobile(form.phone)) {
+      setFieldErrors({ phone: PHONE_MESSAGE })
+      return
+    }
+    setSubmitting(true)
     setFieldErrors({})
 
     try {
@@ -142,7 +154,7 @@ export default function RegisterCustomerPage() {
         <fieldset className="space-y-4">
           <legend className="text-sm font-semibold uppercase tracking-wide text-navy-700">Contact</legend>
           <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Phone number" type="tel" autoComplete="tel" maxLength={20} {...field('phone')} />
+            <FormField label="Phone number" {...field('phone')} {...phoneInputProps(setPhone)} />
             <FormField label="Email address" type="email" autoComplete="email" maxLength={150} {...field('email')} />
             <FormField label="Home branch" className="sm:col-span-2" {...field('branch_id')}>
               <option value="">Select a branch…</option>

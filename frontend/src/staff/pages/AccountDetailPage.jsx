@@ -64,7 +64,7 @@ export default function AccountDetailPage() {
         </div>
         <p className="mt-1 text-sm text-slate-600">
           {account.account_type.type_name} · {formatPercent(account.account_type.interest_rate)} interest · minimum{' '}
-          {formatMoney(account.account_type.minimum_balance)} · {account.branch.branch_name} · opened {formatDateTime(account.opened_date)}
+          {formatMoney(account.account_type.minimum_balance, account.currency_code)} · {account.branch.branch_name} · opened {formatDateTime(account.opened_date)}
         </p>
       </div>
 
@@ -73,7 +73,7 @@ export default function AccountDetailPage() {
       <div className="flex flex-col gap-4 rounded-2xl bg-navy-900 p-6 text-white sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm text-navy-100">Available balance</p>
-          <p className="mt-1 text-4xl font-semibold tabular-nums tracking-tight sm:text-5xl">{formatMoney(account.balance)}</p>
+          <p className="mt-1 text-4xl font-semibold tabular-nums tracking-tight sm:text-5xl">{formatMoney(account.balance, account.currency_code)}</p>
           {account.status === 'FROZEN' && <p className="mt-2 text-sm text-accent-400">Frozen: no deposits, withdrawals or transfers.</p>}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -179,7 +179,7 @@ function CashDialog({ type, account, onClose, onDone }) {
   }
 
   // After success, closing refreshes the page with the result message.
-  const close = result ? () => onDone(`${result.message} New balance: ${formatMoney(result.balanceAfter)}.`) : onClose
+  const close = result ? () => onDone(`${result.message} New balance: ${formatMoney(result.balanceAfter, account.currency_code)}.`) : onClose
 
   return (
     <Modal title={`${copy.title}: ${account.account_number}`} onClose={close}>
@@ -188,7 +188,7 @@ function CashDialog({ type, account, onClose, onDone }) {
           <Alert tone="success">{result.message}</Alert>
           <div className="rounded-xl bg-navy-50 p-4 text-center">
             <p className="text-sm text-navy-800">New balance</p>
-            <p className="mt-1 text-3xl font-semibold tabular-nums text-navy-900">{formatMoney(result.balanceAfter)}</p>
+            <p className="mt-1 text-3xl font-semibold tabular-nums text-navy-900">{formatMoney(result.balanceAfter, account.currency_code)}</p>
           </div>
           <div className="flex justify-end">
             <Button onClick={close}>Done</Button>
@@ -197,8 +197,8 @@ function CashDialog({ type, account, onClose, onDone }) {
       ) : (
         <form onSubmit={handleSubmit} noValidate className="space-y-4">
           <p className="text-sm text-slate-600">
-            Current balance: <strong className="tabular-nums">{formatMoney(account.balance)}</strong>
-            {type === 'withdraw' && <> · minimum {formatMoney(account.account_type.minimum_balance)}</>}
+            Current balance: <strong className="tabular-nums">{formatMoney(account.balance, account.currency_code)}</strong>
+            {type === 'withdraw' && <> · minimum {formatMoney(account.account_type.minimum_balance, account.currency_code)}</>}
           </p>
           <Alert>{error}</Alert>
           <FormField

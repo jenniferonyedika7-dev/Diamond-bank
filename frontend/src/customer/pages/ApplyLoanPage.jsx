@@ -18,6 +18,8 @@ import {
   TIN_PATTERN,
 } from '../../lib/loans.js'
 import { formatMoney } from '../../lib/money.js'
+import { clearFieldError } from '../../lib/forms.js'
+import { isGambianMobile, PHONE_MESSAGE, phoneInputProps } from '../../lib/phone.js'
 import { useDebounced } from '../../lib/useApiList.js'
 import { Field, LoanTermsFields } from '../../shared/loans/LoanParts.jsx'
 import ScheduleTable from '../../shared/loans/ScheduleTable.jsx'
@@ -26,10 +28,11 @@ import KycNotice from '../KycNotice.jsx'
 
 const STEPS = ['Loan details', 'Employment and income', 'Guarantor', 'Review and submit']
 const AMOUNT = /^\d+(\.\d{1,2})?$/
-const PHONE_HINT = 'Digits and spaces, with an optional leading +.'
+// Employer phone only (often a landline); the guarantor's is a mobile (lib/phone.js).
+const EMPLOYER_PHONE_HINT = 'Digits and spaces, with an optional leading +.'
 const GUARANTOR_FIELDS = [
   { key: 'full_name', label: 'Full name', maxLength: 150, autoComplete: 'off' },
-  { key: 'phone', label: 'Phone', maxLength: 20, type: 'tel', hint: PHONE_HINT },
+  { key: 'phone', label: 'Phone', mobile: true },
   { key: 'occupation', label: 'Occupation', maxLength: 100 },
   { key: 'address', label: 'Address', maxLength: 255 },
   { key: 'email', label: 'Email', maxLength: 150, type: 'email' },
@@ -173,9 +176,18 @@ function ApplyForm({ context }) {
     headingRef.current?.focus()
   }, [step])
 
-  const set = (name, value) => setForm((prev) => ({ ...prev, [name]: value }))
+  // Editing a field clears its error; Next and submit check it again.
+  const set = (name, value) => {
+    setForm((prev) => ({ ...prev, [name]: value }))
+    setFieldErrors((prev) => clearFieldError(prev, name))
+  }
   const update = (event) => set(event.target.name, event.target.value)
-  const updateGuarantor = (key) => (event) => setForm((prev) => ({ ...prev, guarantor: { ...prev.guarantor, [key]: event.target.value } }))
+  const setGuarantor = (key, value) => {
+    setForm((prev) => ({ ...prev, guarantor: { ...prev.guarantor, [key]: value } }))
+    setFieldErrors((prev) => clearFieldError(prev, `guarantor.${key}`))
+  }
+  const updateGuarantor = (key) => (event) => setGuarantor(key, event.target.value)
+  const setGuarantorPhone = (phone) => setGuarantor('phone', phone)
 
   // Step 1 shows the quote's 422 messages until the customer presses Next.
   const errors = step === 1 ? { ...(currentQuote?.fieldErrors ?? {}), ...fieldErrors } : fieldErrors
@@ -205,7 +217,7 @@ function ApplyForm({ context }) {
       required('employment_type', 'Choose your employment type.')
       for (const key of activeEmploymentFields) required(key, `Enter the ${EMPLOYMENT_FIELD_LABELS[key].toLowerCase()}.`)
       if (activeEmploymentFields.includes('employer_phone') && form.employer_phone.trim() && !PHONE_PATTERN.test(form.employer_phone.trim())) {
-        e.employer_phone = `Enter a valid phone number. ${PHONE_HINT}`
+        e.employer_phone = `Enter a valid phone number. ${EMPLOYER_PHONE_HINT}`
       }
     }
     if (n === 3) {
@@ -214,7 +226,7 @@ function ApplyForm({ context }) {
         if (!g[f.key].trim()) e[`guarantor.${f.key}`] = `Enter the guarantor's ${f.label.toLowerCase()}.`
       }
       const digits = (value) => String(value ?? '').replace(/\D/g, '')
-      if (g.phone.trim() && !PHONE_PATTERN.test(g.phone.trim())) e['guarantor.phone'] = `Enter a valid phone number. ${PHONE_HINT}`
+      if (g.phone.trim() && !isGambianMobile(g.phone)) e['guarantor.phone'] = PHONE_MESSAGE
       else if (g.phone.trim() && digits(g.phone) === digits(context.contact.phone)) {
         e['guarantor.phone'] = "A guarantor can't be yourself: use someone else's phone number."
       }
@@ -475,7 +487,7 @@ function ApplyForm({ context }) {
                 value={form[key]}
                 onChange={update}
                 error={errors[key]}
-                hint={key === 'employer_phone' ? PHONE_HINT : undefined}
+                hint={key === 'employer_phone' ? EMPLOYER_PHONE_HINT : undefined}
               />
             ))}
             <div className="rounded-lg bg-slate-50 p-4 text-sm">
@@ -508,6 +520,7 @@ function ApplyForm({ context }) {
                 onChange={updateGuarantor(f.key)}
                 error={errors[`guarantor.${f.key}`]}
                 hint={f.hint}
+                {...(f.mobile && { ...phoneInputProps(setGuarantorPhone), autoComplete: 'off' })}
               />
             ))}
           </>

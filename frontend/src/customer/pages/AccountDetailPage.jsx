@@ -70,9 +70,9 @@ export default function AccountDetailPage() {
       <div className="flex flex-col gap-4 rounded-2xl bg-navy-900 p-6 text-white sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm text-navy-100">Balance</p>
-          <p className="mt-1 text-4xl font-semibold tabular-nums tracking-tight sm:text-5xl">{formatMoney(account.balance)}</p>
+          <p className="mt-1 text-4xl font-semibold tabular-nums tracking-tight sm:text-5xl">{formatMoney(account.balance, account.currency_code)}</p>
           <p className="mt-2 text-sm text-navy-100">
-            Minimum balance {formatMoney(account.account_type.minimum_balance)} · {formatPercent(account.account_type.interest_rate)} interest ·{' '}
+            Minimum balance {formatMoney(account.account_type.minimum_balance, account.currency_code)} · {formatPercent(account.account_type.interest_rate)} interest ·{' '}
             {account.branch_name}
           </p>
           {account.status === 'FROZEN' && (

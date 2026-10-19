@@ -16,7 +16,7 @@ class EmployeeFactory extends Factory
             'full_name' => fake()->name(),
             'national_id' => fake()->unique()->bothify('EMP-########'),
             'position' => 'Teller',
-            'phone' => fake()->numerify('#######'),
+            'phone' => fake()->randomElement(['83', '86', '87']).fake()->numerify('#######'),
             'email' => fake()->unique()->safeEmail(),
             'hired_date' => fake()->date(),
         ];

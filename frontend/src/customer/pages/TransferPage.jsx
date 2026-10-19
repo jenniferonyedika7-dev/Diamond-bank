@@ -153,14 +153,14 @@ export default function TransferPage() {
                 error={fieldErrors.from_account_number}
                 hint={
                   source
-                    ? `Remaining today: ${formatMoney(source.remaining_today)} (daily limit ${formatMoney(source.daily_transfer_limit)}). ` +
-                      `You can send up to ${formatMoney(available(source))} (keeps the ${formatMoney(source.minimum_balance)} minimum).`
+                    ? `Remaining today: ${formatMoney(source.remaining_today, source.currency_code)} (daily limit ${formatMoney(source.daily_transfer_limit, source.currency_code)}). ` +
+                      `You can send up to ${formatMoney(available(source), source.currency_code)} (keeps the ${formatMoney(source.minimum_balance, source.currency_code)} minimum).`
                     : undefined
                 }
               >
                 {accounts.map((a) => (
                   <option key={a.account_number} value={a.account_number} disabled={a.status !== 'ACTIVE'}>
-                    {a.type_name} · {a.account_number} · {formatMoney(a.balance)}
+                    {a.type_name} · {a.account_number} · {formatMoney(a.balance, a.currency_code)}
                     {a.status !== 'ACTIVE' && ` (${a.status.toLowerCase()})`}
                   </option>
                 ))}

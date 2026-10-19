@@ -56,7 +56,7 @@ trait BankFixtures
             'date_of_birth' => '1990-01-01',
             'gender' => 'F',
             'national_id' => "NID-{$n}-".uniqid(),
-            'phone' => '7000000',
+            'phone' => '870000000',
             'email' => "customer{$n}-".uniqid().'@example.test',
             'kyc_status' => $kycStatus,
         ], 'customer_id');
@@ -68,7 +68,7 @@ trait BankFixtures
             'full_name' => 'Teller One',
             'national_id' => 'EMP-'.uniqid(),
             'position' => 'Teller',
-            'phone' => '7000001',
+            'phone' => '870000001',
             'email' => 'teller-'.uniqid().'@diamondbank.local',
             'hired_date' => '2020-01-01',
         ], 'employee_id');

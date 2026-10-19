@@ -51,7 +51,8 @@ export const STATUS_TABS = [
   { id: 'closed', label: 'Closed', status: 'CLOSED', empty: 'No closed loans.' },
 ]
 
-// The same formats the backend checks (Tin::PATTERN and the phone rule), so a step can't move on with an obvious typo.
+// The same formats the backend checks (Tin::PATTERN and the employer phone rule), so a step can't move on with an obvious typo.
+// The guarantor's phone is a mobile: lib/phone.js.
 export const TIN_PATTERN = /^\d{8,15}$/
 export const PHONE_PATTERN = /^\+?[0-9 ]{7,20}$/
 export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

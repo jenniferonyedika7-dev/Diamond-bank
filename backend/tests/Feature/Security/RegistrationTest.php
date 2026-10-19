@@ -15,7 +15,7 @@ function registerCustomer(int $n, array $extra = [], string $ip = '10.0.0.1'): T
 
     return test()->withServerVariables(['REMOTE_ADDR' => $ip])->postJson('/api/v1/auth/register/customer', [
         'first_name' => 'Awa', 'last_name' => "Jallow{$n}", 'date_of_birth' => '1995-04-12', 'gender' => 'F',
-        'national_id' => "GM-REG-{$n}", 'phone' => '7001234', 'email' => "awa{$n}@example.test",
+        'national_id' => "GM-REG-{$n}", 'phone' => '870001234', 'email' => "awa{$n}@example.test",
         'branch_id' => $branchId, 'user_name' => "awa{$n}", 'password' => 'secret123', 'password_confirmation' => 'secret123',
         ...$extra,
     ]);
@@ -24,7 +24,7 @@ function registerCustomer(int $n, array $extra = [], string $ip = '10.0.0.1'): T
 function registerStaff(int $n, array $extra = [], string $ip = '10.0.0.1'): TestResponse
 {
     return test()->withServerVariables(['REMOTE_ADDR' => $ip])->postJson('/api/v1/auth/register/staff', [
-        'full_name' => "Lamin Ceesay {$n}", 'national_id' => "GM-STAFF-{$n}", 'position' => 'Teller', 'phone' => '7005555',
+        'full_name' => "Lamin Ceesay {$n}", 'national_id' => "GM-STAFF-{$n}", 'position' => 'Teller', 'phone' => '870005555',
         'email' => "lamin{$n}@diamondbank.test", 'user_name' => "lamin{$n}", 'password' => 'secret123', 'password_confirmation' => 'secret123',
         ...$extra,
     ]);

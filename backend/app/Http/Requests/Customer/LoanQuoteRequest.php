@@ -29,8 +29,8 @@ class LoanQuoteRequest extends FormRequest
         return [
             'loan_type_id.exists' => 'Choose one of the loan types.',
             'amount.decimal' => 'Amounts can have at most 2 decimal places.',
-            'amount.min' => 'The minimum loan is '.Money::dalasi($limits['min_amount']).'.',
-            'amount.max' => 'The maximum loan is '.Money::dalasi($limits['max_amount']).'.',
+            'amount.min' => 'The minimum loan is '.Money::gmd($limits['min_amount']).'.',
+            'amount.max' => 'The maximum loan is '.Money::gmd($limits['max_amount']).'.',
             'term_months.min' => $term,
             'term_months.max' => $term,
             'repayment_plan.in' => 'Choose monthly instalments or a single payment at the end of the term.',

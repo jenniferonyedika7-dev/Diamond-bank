@@ -41,7 +41,7 @@ it('quotes both options for the cash payment form', function () {
 it('records a cash instalment: no account touched, received by me', function () {
     recordCash($this->loan)
         ->assertCreated()
-        ->assertJsonPath('message', 'Cash payment of D 888.49 recorded.')
+        ->assertJsonPath('message', 'Cash payment of GMD 888.49 recorded.')
         ->assertJsonPath('data.transaction_id', null)
         ->assertJsonPath('data.account_number', null)
         ->assertJsonPath('data.loan_status', 'ACTIVE');
@@ -64,7 +64,7 @@ it('records a cash instalment: no account touched, received by me', function () 
 it('records a cash payoff and closes the loan', function () {
     recordCash($this->loan, ['payment_type' => 'EARLY_PAYOFF', 'instalment_number' => null, 'amount' => '10100.00'])
         ->assertCreated()
-        ->assertJsonPath('message', 'Cash payment of D 10,100.00 recorded. The loan is now paid off.')
+        ->assertJsonPath('message', 'Cash payment of GMD 10,100.00 recorded. The loan is now paid off.')
         ->assertJsonPath('data.loan_status', 'CLOSED');
 
     expect(loanRow($this->loan)->status)->toBe('CLOSED');

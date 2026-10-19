@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Customer;
 
+use App\Rules\GambianMobile;
 use App\Support\Tin;
 use Illuminate\Validation\Validator;
 
@@ -22,6 +23,7 @@ class LoanApplicationRequest extends LoanQuoteRequest
         'OTHER' => ['employment_description'],
     ];
 
+    /** employer_phone only: a workplace number is often a landline, so it isn't held to GambianMobile. */
     private const PHONE = 'regex:/^\+?[0-9 ]{7,20}$/';
 
     public function rules(): array
@@ -47,7 +49,7 @@ class LoanApplicationRequest extends LoanQuoteRequest
             'employment_description' => [...$requiredFor('OTHER'), 'max:500'],
             'guarantor' => ['required', 'array'],
             'guarantor.full_name' => ['required', 'string', 'max:150'],
-            'guarantor.phone' => ['required', 'string', self::PHONE],
+            'guarantor.phone' => ['required', 'string', new GambianMobile],
             'guarantor.occupation' => ['required', 'string', 'max:100'],
             'guarantor.address' => ['required', 'string', 'max:255'],
             'guarantor.email' => ['required', 'email', 'max:150'],
@@ -62,7 +64,6 @@ class LoanApplicationRequest extends LoanQuoteRequest
             'monthly_income.decimal' => 'Amounts can have at most 2 decimal places.',
             'tin.regex' => 'The TIN must be 8 to 15 digits.',
             'employer_phone.regex' => 'Enter a valid phone number (digits, spaces and an optional leading +).',
-            'guarantor.phone.regex' => 'Enter a valid phone number (digits, spaces and an optional leading +).',
             'required_if' => 'The :attribute is required for this employment type.',
         ];
     }
@@ -86,6 +87,14 @@ class LoanApplicationRequest extends LoanQuoteRequest
             'guarantor.address' => "guarantor's address",
             'guarantor.email' => "guarantor's email",
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $guarantor = $this->input('guarantor');
+        if (is_array($guarantor) && array_key_exists('phone', $guarantor)) {
+            $this->merge(['guarantor' => array_merge($guarantor, ['phone' => GambianMobile::normalize($guarantor['phone'])])]);
+        }
     }
 
     /** A guarantor can't share the applicant's profile phone or email. */

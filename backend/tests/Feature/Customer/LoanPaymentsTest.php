@@ -43,7 +43,7 @@ it('quotes the next instalment and paying everything now, with my accounts', fun
 it('pays the next instalment from my account', function () {
     payLoan($this->loan)
         ->assertCreated()
-        ->assertJsonPath('message', "Payment received. D 888.49 was paid from account {$this->account->account_number}.")
+        ->assertJsonPath('message', "Payment received. GMD 888.49 was paid from account {$this->account->account_number}.")
         ->assertJsonPath('data.balance_after', '19111.51')
         ->assertJsonPath('data.remaining_balance', '9773.37')
         ->assertJsonPath('data.loan_status', 'ACTIVE');
@@ -64,7 +64,7 @@ it('pays the next instalment from my account', function () {
 it('pays everything off and closes the loan', function () {
     payLoan($this->loan, ['payment_type' => 'EARLY_PAYOFF', 'instalment_number' => null, 'amount' => '10100.00'])
         ->assertCreated()
-        ->assertJsonPath('message', "Payment received. D 10,100.00 was paid from account {$this->account->account_number}. Your loan is now paid off.")
+        ->assertJsonPath('message', "Payment received. GMD 10,100.00 was paid from account {$this->account->account_number}. Your loan is now paid off.")
         ->assertJsonPath('data.interest_waived', '561.86')
         ->assertJsonPath('data.loan_status', 'CLOSED');
 

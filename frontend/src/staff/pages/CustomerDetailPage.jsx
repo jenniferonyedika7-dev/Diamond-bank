@@ -10,6 +10,8 @@ import ReasonDialog from '../../components/ReasonDialog.jsx'
 import { api, getErrorMessage, getFieldErrors } from '../../lib/api.js'
 import { formatDate, formatDateTime } from '../../lib/format.js'
 import { formatMoney } from '../../lib/money.js'
+import { clearFieldError } from '../../lib/forms.js'
+import { isGambianMobile, PHONE_MESSAGE, phoneInputProps } from '../../lib/phone.js'
 import { AccountStatusBadge, CardStatusBadge, KycBadge, LoginStatusBadge } from '../../components/StatusBadges.jsx'
 import TransactionList from '../../components/TransactionList.jsx'
 import { RECOVERY_LABELS } from '../../shared/access/labels.js'
@@ -187,7 +189,7 @@ export default function CustomerDetailPage() {
                   </span>
                   <span className="flex items-center gap-3">
                     <AccountStatusBadge status={a.status} />
-                    <span className="font-medium tabular-nums text-slate-900">{formatMoney(a.balance)}</span>
+                    <span className="font-medium tabular-nums text-slate-900">{formatMoney(a.balance, a.currency_code)}</span>
                   </span>
                 </Link>
               </li>
@@ -358,13 +360,24 @@ function EditCustomerDialog({ customer, onClose, onDone }) {
     }
   }, [])
 
-  const update = (event) => setForm((prev) => ({ ...prev, [event.target.name]: event.target.value }))
+  const update = (event) => {
+    setForm((prev) => ({ ...prev, [event.target.name]: event.target.value }))
+    setFieldErrors((prev) => clearFieldError(prev, event.target.name))
+  }
+  const setPhone = (phone) => {
+    setForm((prev) => ({ ...prev, phone }))
+    setFieldErrors((prev) => clearFieldError(prev, 'phone'))
+  }
   const field = (id) => ({ id, value: form[id], onChange: update, error: fieldErrors[id], required: true })
 
   async function handleSubmit(event) {
     event.preventDefault()
-    setSubmitting(true)
     setError('')
+    if (!isGambianMobile(form.phone)) {
+      setFieldErrors({ phone: PHONE_MESSAGE })
+      return
+    }
+    setSubmitting(true)
     setFieldErrors({})
     try {
       const { data } = await api.put(`/api/v1/staff/customers/${customer.customer_id}`, { ...form, branch_id: Number(form.branch_id) })
@@ -395,7 +408,7 @@ function EditCustomerDialog({ customer, onClose, onDone }) {
             hint={idLocked ? 'Locked: the national ID can only be changed while KYC is pending.' : undefined}
             {...field('national_id')}
           />
-          <FormField label="Phone number" type="tel" maxLength={20} {...field('phone')} />
+          <FormField label="Phone number" {...field('phone')} {...phoneInputProps(setPhone)} />
           <FormField label="Email address" type="email" maxLength={150} {...field('email')} />
           <FormField label="Home branch" {...field('branch_id')}>
             {branches.length === 0 && <option value={form.branch_id}>{customer.branch?.branch_name}</option>}

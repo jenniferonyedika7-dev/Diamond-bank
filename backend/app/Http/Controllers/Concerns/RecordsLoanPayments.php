@@ -38,7 +38,7 @@ trait RecordsLoanPayments
             $request->user()->user_id,
         ]);
 
-        $amount = Money::dalasi((string) $result->amount);
+        $amount = Money::gmd((string) $result->amount);
         $closed = $result->loan_status === 'CLOSED';
         $message = $channel === 'ONLINE'
             ? "Payment received. {$amount} was paid from account {$result->account_number}.".($closed ? ' Your loan is now paid off.' : '')

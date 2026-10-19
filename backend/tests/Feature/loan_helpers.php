@@ -34,7 +34,7 @@ function loanApplication(object $account, array $overrides = []): array
         'job_title' => 'Clerk',
         'guarantor' => [
             'full_name' => 'Fatou Sowe',
-            'phone' => '+220 7012345',
+            'phone' => '870123456',
             'occupation' => 'Teacher',
             'address' => '12 Kairaba Avenue, Serrekunda',
             'email' => 'fatou.sowe@example.test',
@@ -80,13 +80,13 @@ function loanFor(User $customer, object $account, array $overrides = []): object
         'tin' => '123456789',
         'employment_type' => 'OTHER',
         'employment_description' => 'Farmer',
-        'contact_phone' => '7000000',
+        'contact_phone' => '870000000',
         'contact_email' => 'me@example.test',
     ]);
     DB::table('loan_guarantor')->insert([
         'loan_id' => $loanId,
         'full_name' => 'Fatou Sowe',
-        'phone' => '+220 7012345',
+        'phone' => '870123456',
         'occupation' => 'Teacher',
         'address' => '12 Kairaba Avenue, Serrekunda',
         'email' => 'fatou.sowe@example.test',

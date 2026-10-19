@@ -56,7 +56,7 @@ class AdminSeeder extends Seeder
                     'full_name' => 'System Administrator',
                     'national_id' => self::ADMIN_NATIONAL_ID,
                     'position' => 'Administrator',
-                    'phone' => '0000000',
+                    'phone' => '830000000',
                     'email' => 'admin@diamondbank.local',
                     'hired_date' => now()->toDateString(),
                 ], 'employee_id');

@@ -6,6 +6,8 @@ import Button from '../components/Button.jsx'
 import FormField from '../components/FormField.jsx'
 import PasswordRules from '../components/PasswordRules.jsx'
 import { api, ensureCsrf, getErrorMessage, getFieldErrors } from '../lib/api.js'
+import { clearFieldError } from '../lib/forms.js'
+import { isGambianMobile, PHONE_MESSAGE, phoneInputProps } from '../lib/phone.js'
 
 const EMPTY = {
   full_name: '',
@@ -27,12 +29,22 @@ export default function RegisterStaffPage() {
 
   function update(event) {
     setForm((prev) => ({ ...prev, [event.target.name]: event.target.value }))
+    setFieldErrors((prev) => clearFieldError(prev, event.target.name))
+  }
+
+  function setPhone(phone) {
+    setForm((prev) => ({ ...prev, phone }))
+    setFieldErrors((prev) => clearFieldError(prev, 'phone'))
   }
 
   async function handleSubmit(event) {
     event.preventDefault()
-    setSubmitting(true)
     setError('')
+    if (!isGambianMobile(form.phone)) {
+      setFieldErrors({ phone: PHONE_MESSAGE })
+      return
+    }
+    setSubmitting(true)
     setFieldErrors({})
 
     try {
@@ -80,7 +92,7 @@ export default function RegisterStaffPage() {
             <FormField label="Full name" autoComplete="name" maxLength={150} className="sm:col-span-2" {...field('full_name')} />
             <FormField label="National ID number" maxLength={30} {...field('national_id')} />
             <FormField label="Position" autoComplete="organization-title" maxLength={100} hint="For example, Teller." {...field('position')} />
-            <FormField label="Phone number" type="tel" autoComplete="tel" maxLength={20} {...field('phone')} />
+            <FormField label="Phone number" {...field('phone')} {...phoneInputProps(setPhone)} />
             <FormField label="Work email" type="email" autoComplete="email" maxLength={150} {...field('email')} />
           </div>
         </fieldset>

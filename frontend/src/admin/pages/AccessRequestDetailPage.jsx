@@ -131,7 +131,7 @@ export default function AccessRequestDetailPage() {
                   <span className="font-mono">{a.account_number}</span>
                   <span className="flex items-center gap-3">
                     <AccountStatusBadge status={a.status} />
-                    <span className="tabular-nums">{formatMoney(a.balance)}</span>
+                    <span className="tabular-nums">{formatMoney(a.balance, a.currency_code)}</span>
                   </span>
                 </li>
               ))}

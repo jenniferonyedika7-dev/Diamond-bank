@@ -71,7 +71,7 @@ it('shows the full application, guarantor, checks and approvals on the detail', 
         ->assertOk()
         ->assertJsonPath('data.tin', '123456789')
         ->assertJsonPath('data.application.employment_type', 'OTHER')
-        ->assertJsonPath('data.application.contact_phone', '7000000')
+        ->assertJsonPath('data.application.contact_phone', '870000000')
         ->assertJsonPath('data.guarantor.full_name', 'Fatou Sowe')
         ->assertJsonPath('data.verifications.0.check_type', 'BANK_STATEMENT')
         ->assertJsonPath('data.verifications.0.recorded', true)

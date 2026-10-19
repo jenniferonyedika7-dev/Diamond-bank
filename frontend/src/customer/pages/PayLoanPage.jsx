@@ -232,13 +232,13 @@ export default function PayLoanPage() {
                 error={fieldErrors.account_number}
                 hint={
                   source
-                    ? `Available: ${formatMoney(available(source))} (keeps the ${formatMoney(source.minimum_balance)} minimum).`
+                    ? `Available: ${formatMoney(available(source), source.currency_code)} (keeps the ${formatMoney(source.minimum_balance, source.currency_code)} minimum).`
                     : undefined
                 }
               >
                 {quote.accounts.map((a) => (
                   <option key={a.account_number} value={a.account_number}>
-                    {a.type_name} · {a.account_number} · {formatMoney(a.balance)}
+                    {a.type_name} · {a.account_number} · {formatMoney(a.balance, a.currency_code)}
                   </option>
                 ))}
               </FormField>
