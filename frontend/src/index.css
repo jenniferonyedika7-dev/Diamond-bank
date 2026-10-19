@@ -3,17 +3,94 @@
 @theme {
   --color-navy-50: #eef3fa;
   --color-navy-100: #d6e1f1;
+  --color-navy-200: #b3c7e4;
+  --color-navy-300: #87a6d1;
+  --color-navy-400: #5a82ba;
+  --color-navy-500: #3864a3;
   --color-navy-600: #1d4f91;
   --color-navy-700: #163f78;
   --color-navy-800: #102f5c;
   --color-navy-900: #0b2545;
+  --color-navy-950: #071a33;
+  --color-accent-50: #fdf8eb;
+  --color-accent-100: #f8ebc6;
+  --color-accent-300: #edc96a;
   --color-accent-400: #e3b23c;
   --color-accent-500: #c99a2e;
+  --color-accent-600: #a67c1f;
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 @layer base {
   html {
     @apply bg-slate-50 text-slate-800 antialiased;
+  }
+
+  /* A visible keyboard focus ring on everything focusable; components may set their own colour. */
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid var(--color-accent-500);
+    outline-offset: 2px;
+  }
+
+  :where(a, button, label, summary, select) {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* A white panel: the standard container for page content. */
+@utility card {
+  background-color: var(--color-white);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  outline: 1px solid var(--color-slate-200);
+  outline-offset: -1px;
+}
+
+/* A card that is a link or button: lifts and gains a navy edge on hover and focus. */
+@utility card-interactive {
+  transition-property: box-shadow, outline-color, transform;
+  transition-duration: 150ms;
+
+  &:hover {
+    box-shadow: var(--shadow-md);
+    outline-color: var(--color-navy-400);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-500);
+    outline-offset: 2px;
+  }
+}
+
+/* A table inside a card: navy header row, hover on body rows. */
+@utility data-table {
+  min-width: 100%;
+  font-size: var(--text-sm);
+  line-height: var(--text-sm--line-height);
+
+  & thead {
+    background-color: var(--color-navy-50);
+    text-align: left;
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: var(--tracking-wide);
+    text-transform: uppercase;
+    color: var(--color-navy-800);
+  }
+
+  & thead th {
+    border-bottom: 1px solid var(--color-navy-100);
+  }
+
+  & tbody tr + tr {
+    border-top: 1px solid var(--color-slate-100);
+  }
+
+  & tbody tr {
+    transition: background-color 150ms;
+  }
+
+  & tbody tr:hover {
+    background-color: color-mix(in oklab, var(--color-navy-50) 70%, transparent);
   }
 }

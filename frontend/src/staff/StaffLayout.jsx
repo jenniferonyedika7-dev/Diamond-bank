@@ -1,17 +1,12 @@
+import { Outlet } from 'react-router'
 import Alert from '../components/Alert.jsx'
-import SideNavLayout from '../components/SideNavLayout.jsx'
 import Spinner from '../components/Spinner.jsx'
 import { useStaffBranch } from './staffBranch.js'
 
-const STAFF_NAV = [
-  { to: '/staff', label: 'Dashboard', end: true },
-  { to: '/staff/customers', label: 'Customers' },
-  { to: '/staff/cards', label: 'Cards' },
-  { to: '/staff/loans', label: 'Loans' },
-  { to: '/staff/audit-log', label: 'Audit log' },
-]
-
-/** Staff work at their current branch; without one the API refuses everything, so say so up front. */
+/**
+ * Staff work at their current branch; without one the API refuses everything, so say so up front.
+ * The section links are in the top navigation bar (lib/nav.js).
+ */
 export default function StaffLayout() {
   const { status, error } = useStaffBranch()
 
@@ -30,5 +25,5 @@ export default function StaffLayout() {
     )
   }
 
-  return <SideNavLayout items={STAFF_NAV} label="Staff" />
+  return <Outlet />
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import Alert from '../../components/Alert.jsx'
 import Badge from '../../components/Badge.jsx'
 import EmptyState from '../../components/EmptyState.jsx'
@@ -14,12 +14,22 @@ import { useApiList, useDebounced } from '../../lib/useApiList.js'
 
 /** Read-only directory of all customers across branches. */
 export default function CustomersPage() {
-  const [search, setSearch] = useState('')
+  // ?search= comes from the navigation bar's customer search.
+  const [searchParams] = useSearchParams()
+  const [search, setSearch] = useState(searchParams.get('search') ?? '')
   const [kycStatus, setKycStatus] = useState('')
   const [branchId, setBranchId] = useState('')
   const [branches, setBranches] = useState([])
   const [page, setPage] = useState(1)
   const debouncedSearch = useDebounced(search.trim())
+  // A search from the navigation bar while already on this page: take its term (without an effect).
+  const { key } = useLocation()
+  const [locationKey, setLocationKey] = useState(key)
+  if (key !== locationKey) {
+    setLocationKey(key)
+    setSearch(searchParams.get('search') ?? '')
+    setPage(1)
+  }
   const { items, pagination, loading, error } = useApiList('/api/v1/admin/customers', {
     search: debouncedSearch || undefined,
     kyc_status: kycStatus || undefined,

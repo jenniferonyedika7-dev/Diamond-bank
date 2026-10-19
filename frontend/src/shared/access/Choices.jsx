@@ -1,18 +1,24 @@
+// Native radios and checkboxes in the bank's navy, with a gold keyboard focus ring.
+const CONTROL =
+  'mt-0.5 size-4 shrink-0 cursor-pointer accent-navy-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500'
+
+const OPTION = 'flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 -mx-2 text-sm text-slate-800 transition-colors hover:bg-navy-50'
+
 /** A fieldset of radio buttons. options: [{ value, label, hint? }] */
 export function RadioGroup({ name, legend, options, value, onChange, error }) {
   return (
     <fieldset aria-describedby={error ? `${name}-error` : undefined}>
       <legend className="mb-1.5 text-sm font-medium text-slate-700">{legend}</legend>
-      <div className="space-y-2">
+      <div className="space-y-1">
         {options.map((option) => (
-          <label key={option.value} className="flex items-start gap-2 text-sm text-slate-800">
+          <label key={option.value} className={OPTION}>
             <input
               type="radio"
               name={name}
               value={option.value}
               checked={value === option.value}
               onChange={() => onChange(option.value)}
-              className="mt-0.5 size-4 accent-navy-700"
+              className={CONTROL}
             />
             <span>
               {option.label}
@@ -22,7 +28,7 @@ export function RadioGroup({ name, legend, options, value, onChange, error }) {
         ))}
       </div>
       {error && (
-        <p id={`${name}-error`} className="mt-1 text-sm text-red-700">
+        <p id={`${name}-error`} className="mt-1.5 text-sm text-red-700">
           {error}
         </p>
       )}
@@ -33,7 +39,7 @@ export function RadioGroup({ name, legend, options, value, onChange, error }) {
 export function Checkbox({ id, label, checked, onChange, error }) {
   return (
     <div>
-      <label htmlFor={id} className="flex items-start gap-2 text-sm text-slate-800">
+      <label htmlFor={id} className={OPTION}>
         <input
           id={id}
           type="checkbox"
@@ -41,12 +47,12 @@ export function Checkbox({ id, label, checked, onChange, error }) {
           onChange={(e) => onChange(e.target.checked)}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
-          className="mt-0.5 size-4 accent-navy-700"
+          className={CONTROL}
         />
         <span>{label}</span>
       </label>
       {error && (
-        <p id={`${id}-error`} className="mt-1 text-sm text-red-700">
+        <p id={`${id}-error`} className="mt-1.5 text-sm text-red-700">
           {error}
         </p>
       )}

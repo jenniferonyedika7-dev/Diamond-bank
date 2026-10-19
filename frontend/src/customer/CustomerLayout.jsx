@@ -1,18 +1,9 @@
+import { Outlet } from 'react-router'
 import Alert from '../components/Alert.jsx'
 import Loading from '../components/Loading.jsx'
-import SideNavLayout from '../components/SideNavLayout.jsx'
 import { useCustomerData } from './customerData.js'
 
-const CUSTOMER_NAV = [
-  { to: '/customer', label: 'Overview', end: true },
-  { to: '/customer/accounts', label: 'Accounts' },
-  { to: '/customer/transfer', label: 'Transfer' },
-  { to: '/customer/cards', label: 'Cards' },
-  { to: '/customer/loans', label: 'Loans' },
-  { to: '/customer/profile', label: 'Profile' },
-  { to: '/customer/change-password', label: 'Change password' },
-]
-
+/** The customer pages, once the overview has loaded. The section links are in the top navigation bar (lib/nav.js). */
 export default function CustomerLayout() {
   const { status, error } = useCustomerData()
 
@@ -25,5 +16,5 @@ export default function CustomerLayout() {
     )
   }
 
-  return <SideNavLayout items={CUSTOMER_NAV} label="Your banking" />
+  return <Outlet />
 }

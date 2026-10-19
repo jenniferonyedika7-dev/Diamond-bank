@@ -40,7 +40,7 @@ export default function TransactionList({ transactions, showAccount = false }) {
     <>
       <ul className="space-y-2 md:hidden">
         {transactions.map((row) => (
-          <li key={row.transaction_id} className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-slate-200">
+          <li key={row.transaction_id} className="card p-3">
             <div className="flex items-baseline justify-between gap-3">
               <span className="font-medium text-slate-900">{typeLabel(row)}</span>
               <SignedAmount row={row} />
@@ -56,9 +56,9 @@ export default function TransactionList({ transactions, showAccount = false }) {
         ))}
       </ul>
 
-      <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-200 md:block">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+      <div className="card hidden overflow-x-auto md:block">
+        <table className="data-table">
+          <thead>
             <tr>
               <th scope="col" className="px-4 py-3">Date</th>
               {showAccount && <th scope="col" className="px-4 py-3">Account</th>}
@@ -70,7 +70,7 @@ export default function TransactionList({ transactions, showAccount = false }) {
               <th scope="col" className="px-4 py-3">Description</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody>
             {transactions.map((row) => (
               <tr key={row.transaction_id}>
                 <td className="whitespace-nowrap px-4 py-3 text-slate-700">{formatDateTime(row.transaction_date)}</td>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, useLocation, useSearchParams } from 'react-router'
 import Alert from '../../components/Alert.jsx'
 import Badge from '../../components/Badge.jsx'
 import EmptyState from '../../components/EmptyState.jsx'
@@ -23,6 +23,14 @@ export default function CustomersPage() {
   const tab = TABS.find((t) => t.id === searchParams.get('tab')) ?? TABS[0]
   const [search, setSearch] = useState(searchParams.get('search') ?? '')
   const [page, setPage] = useState(1)
+  // A search from the navigation bar while already on this page: take its term (without an effect).
+  const { key } = useLocation()
+  const [locationKey, setLocationKey] = useState(key)
+  if (key !== locationKey) {
+    setLocationKey(key)
+    setSearch(searchParams.get('search') ?? '')
+    setPage(1)
+  }
   const debouncedSearch = useDebounced(search.trim())
   const { items, pagination, loading, error } = useApiList('/api/v1/staff/customers', {
     kyc_status: tab.status,
