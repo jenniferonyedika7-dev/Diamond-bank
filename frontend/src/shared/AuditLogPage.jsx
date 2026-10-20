@@ -36,7 +36,7 @@ export default function AuditLogPage() {
     <section>
       <PageHeader title="Audit log" description="Every change made through the system, newest first. Read-only." />
 
-      <form className="mb-4 grid gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:grid-cols-2 lg:grid-cols-5" onSubmit={(e) => e.preventDefault()}>
+      <form className="card mb-4 grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5" onSubmit={(e) => e.preventDefault()}>
         <FormField id="action_type" label="Action" value={filters.action_type} onChange={update}>
           <option value="">All actions</option>
           {options.action_types.map((a) => (
@@ -80,9 +80,9 @@ export default function AuditLogPage() {
         <EmptyState title={filtered ? 'No entries match these filters.' : 'No audit entries yet.'} />
       ) : (
         <>
-          <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+          <div className="card overflow-x-auto">
+            <table className="data-table">
+              <thead>
                 <tr>
                   <th scope="col" className="px-4 py-3">When</th>
                   <th scope="col" className="px-4 py-3">Action</th>
@@ -93,7 +93,7 @@ export default function AuditLogPage() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {items.map((row) => {
                   const open = expanded === row.audit_log_id
                   const detailsId = `audit-details-${row.audit_log_id}`

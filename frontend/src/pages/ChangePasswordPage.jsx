@@ -47,7 +47,7 @@ export default function ChangePasswordPage() {
 
   return (
     <div className="mx-auto max-w-md">
-      <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
+      <div className="card p-6 sm:p-8">
         <h1 className="text-2xl font-semibold text-navy-900">Change your password</h1>
         {user?.must_change_password && (
           <Alert tone="info" className="mt-4">

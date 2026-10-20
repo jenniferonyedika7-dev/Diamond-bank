@@ -47,7 +47,7 @@ export default function DashboardPage() {
     <section>
       <PageHeader title={`Welcome, ${displayName(user)}`} description="Customers, accounts and cash at your branch." />
 
-      <form onSubmit={handleSearch} className="mb-6 flex flex-col gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-end">
+      <form onSubmit={handleSearch} className="card mb-6 flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
         <FormField
           id="quick-search"
           label="Find an account or customer"
@@ -92,10 +92,7 @@ export default function DashboardPage() {
 
 function Stat({ label, value, to }) {
   return (
-    <Link
-      to={to}
-      className="block rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200 hover:ring-navy-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600"
-    >
+    <Link to={to} className="card card-interactive block p-5">
       <p className="text-sm text-slate-500">{label}</p>
       <p className="mt-1 text-3xl font-semibold tabular-nums text-navy-900">{value}</p>
     </Link>

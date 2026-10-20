@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import Alert from '../../components/Alert.jsx'
 import Button from '../../components/Button.jsx'
+import { buttonClass } from '../../components/buttonStyles.js'
 import ConfirmDialog from '../../components/ConfirmDialog.jsx'
 import EmptyState from '../../components/EmptyState.jsx'
 import Loading from '../../components/Loading.jsx'
@@ -15,8 +16,6 @@ import { useApiList } from '../../lib/useApiList.js'
 import { canBank, useCustomerData } from '../customerData.js'
 import KycNotice from '../KycNotice.jsx'
 
-const LINK_BUTTON =
-  'inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2'
 
 export default function LoansPage() {
   const { overview } = useCustomerData()
@@ -29,7 +28,7 @@ export default function LoansPage() {
   const hasOpenLoan = loans.items.some((loan) => OPEN_STATUSES.includes(loan.status))
   const canApply = canBank(customer, accounts) && !loans.loading && !loans.error && !hasOpenLoan
   const applyButton = canApply ? (
-    <Link to="/customer/loans/apply" className={`${LINK_BUTTON} bg-navy-900 text-white hover:bg-navy-800 focus-visible:outline-accent-500`}>
+    <Link to="/customer/loans/apply" className={buttonClass()}>
       Apply for a loan
     </Link>
   ) : null
@@ -84,7 +83,7 @@ export default function LoansPage() {
 
 function LoanCard({ loan, onCancel }) {
   return (
-    <li className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
+    <li className="card p-4 sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 font-medium text-slate-900">
@@ -103,11 +102,8 @@ function LoanCard({ loan, onCancel }) {
             </p>
           )}
         </div>
-        <div className="flex shrink-0 gap-2">
-          <Link
-            to={`/customer/loans/${loan.loan_id}`}
-            className={`${LINK_BUTTON} bg-white text-navy-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus-visible:outline-navy-600`}
-          >
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Link to={`/customer/loans/${loan.loan_id}`} className={buttonClass('secondary')}>
             View<span className="sr-only"> {loan.loan_type.type_name} of {formatMoney(loan.amount)}</span>
           </Link>
           {loan.can_cancel && (

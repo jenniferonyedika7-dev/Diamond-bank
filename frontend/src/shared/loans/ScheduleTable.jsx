@@ -20,7 +20,7 @@ export default function ScheduleTable({ schedule, estimated = false }) {
     <>
       <ul className="space-y-2 md:hidden">
         {schedule.map((row) => (
-          <li key={row.instalment_number} className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-slate-200">
+          <li key={row.instalment_number} className="card p-3">
             <div className="flex items-baseline justify-between gap-3">
               <span className="font-medium text-slate-900">
                 #{row.instalment_number} · {due(row)}
@@ -39,9 +39,9 @@ export default function ScheduleTable({ schedule, estimated = false }) {
         ))}
       </ul>
 
-      <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-200 md:block">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+      <div className="card hidden overflow-x-auto md:block">
+        <table className="data-table">
+          <thead>
             <tr>
               <th scope="col" className="px-4 py-3">#</th>
               <th scope="col" className="px-4 py-3">Due date</th>
@@ -52,7 +52,7 @@ export default function ScheduleTable({ schedule, estimated = false }) {
               {showStatus && <th scope="col" className="px-4 py-3">Status</th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody>
             {schedule.map((row) => (
               <tr key={row.instalment_number}>
                 <td className="px-4 py-3 text-slate-700">{row.instalment_number}</td>

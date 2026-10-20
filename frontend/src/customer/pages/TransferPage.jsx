@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import Alert from '../../components/Alert.jsx'
 import Button from '../../components/Button.jsx'
+import { buttonClass } from '../../components/buttonStyles.js'
 import FormField from '../../components/FormField.jsx'
 import PageHeader from '../../components/PageHeader.jsx'
 import { api, getErrorMessage, getFieldErrors } from '../../lib/api.js'
@@ -139,7 +140,7 @@ export default function TransferPage() {
       </p>
 
       {step === 'details' && (
-        <form onSubmit={handleContinue} noValidate className="space-y-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <form onSubmit={handleContinue} noValidate className="card space-y-5 p-6">
           <Alert>{error}</Alert>
           {active.length === 0 ? (
             <Alert tone="info">None of your accounts can send money right now. Please contact your branch.</Alert>
@@ -197,16 +198,18 @@ export default function TransferPage() {
                 onChange={update}
                 error={fieldErrors.description}
               />
-              <Button type="submit" className="w-full" loading={pending} loadingText="Checking recipient…">
-                Continue
-              </Button>
+              <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
+                <Button type="submit" loading={pending} loadingText="Checking recipient…">
+                  Continue
+                </Button>
+              </div>
             </>
           )}
         </form>
       )}
 
       {step === 'review' && recipient && (
-        <form onSubmit={handleSend} noValidate className="space-y-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <form onSubmit={handleSend} noValidate className="card space-y-5 p-6">
           <Alert>{error}</Alert>
           <p className="text-lg text-slate-900">
             Send <strong className="tabular-nums">{formatMoney(form.amount)}</strong> to <strong>{recipient.recipient}</strong>{' '}
@@ -249,7 +252,7 @@ export default function TransferPage() {
       )}
 
       {step === 'result' && result && (
-        <div className="space-y-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <div className="card space-y-5 p-6">
           {result.ok ? (
             <>
               <Alert tone="success">
@@ -262,7 +265,7 @@ export default function TransferPage() {
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                 <Link
                   to={`/customer/accounts/${result.data.from_account_number}`}
-                  className="inline-flex items-center justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-navy-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50"
+                  className={buttonClass('secondary')}
                 >
                   View account
                 </Link>
@@ -273,7 +276,7 @@ export default function TransferPage() {
             <>
               <Alert>{result.message}</Alert>
               <p className="text-sm text-slate-600">No money was moved.</p>
-              <div className="flex justify-end">
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                 <Button onClick={() => reset(true)}>Back to edit</Button>
               </div>
             </>

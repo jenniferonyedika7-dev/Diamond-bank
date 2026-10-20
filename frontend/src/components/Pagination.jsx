@@ -6,7 +6,7 @@ export default function Pagination({ pagination, onPageChange }) {
   const { current_page: page, last_page: last, total } = pagination
 
   return (
-    <nav aria-label="Pagination" className="mt-4 flex items-center justify-between gap-3 text-sm text-slate-600">
+    <nav aria-label="Pagination" className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-600">
       <p>
         Page {page} of {last} · {total} total
       </p>

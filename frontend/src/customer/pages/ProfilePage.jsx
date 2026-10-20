@@ -43,7 +43,7 @@ export default function ProfilePage() {
       <PageHeader title="Profile" />
       <Alert tone="info">To change your details, visit your branch.</Alert>
 
-      <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+      <div className="card p-5">
         <p className="mb-4 text-sm text-slate-700">
           Identity verification: <KycBadge status={profile.kyc_status} />
         </p>
@@ -58,7 +58,7 @@ export default function ProfilePage() {
       </div>
 
       {profile.addresses.length > 0 && (
-        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+        <div className="card p-5">
           <h2 className="mb-3 text-lg font-semibold text-navy-900">Addresses</h2>
           <ul className="space-y-1 text-sm text-slate-700">
             {profile.addresses.map((a) => (

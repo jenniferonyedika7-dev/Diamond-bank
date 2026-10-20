@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router'
 import Alert from '../../components/Alert.jsx'
 import Button from '../../components/Button.jsx'
+import { buttonClass } from '../../components/buttonStyles.js'
 import FormField from '../../components/FormField.jsx'
 import Loading from '../../components/Loading.jsx'
 import PageHeader from '../../components/PageHeader.jsx'
@@ -14,8 +15,6 @@ import KycNotice from '../KycNotice.jsx'
 
 const STEPS = { details: 'Step 1 of 3: What to pay', review: 'Step 2 of 3: Review and confirm', result: 'Step 3 of 3: Result' }
 
-const LINK_BUTTON =
-  'inline-flex items-center justify-center rounded-lg bg-white px-4 py-2.5 text-sm font-semibold text-navy-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50'
 
 /** How much can leave the account without going below its minimum balance (display only, as on the transfer page). */
 function available(account) {
@@ -178,7 +177,7 @@ export default function PayLoanPage() {
       </p>
 
       {step === 'details' && (
-        <form onSubmit={handleContinue} noValidate className="space-y-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <form onSubmit={handleContinue} noValidate className="card space-y-5 p-6">
           <Alert>{error}</Alert>
           <Alert tone="info">{notice}</Alert>
           {quote.overdue_count > 0 && (
@@ -242,16 +241,18 @@ export default function PayLoanPage() {
                   </option>
                 ))}
               </FormField>
-              <Button type="submit" className="w-full">
-                Continue
-              </Button>
+              <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
+                <Button type="submit">
+                  Continue
+                </Button>
+              </div>
             </>
           )}
         </form>
       )}
 
       {step === 'review' && (
-        <form onSubmit={handlePay} noValidate className="space-y-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <form onSubmit={handlePay} noValidate className="card space-y-5 p-6">
           <Alert>{error}</Alert>
           <p className="text-lg text-slate-900">
             Pay <strong className="tabular-nums">{formatMoney(amount)}</strong> towards loan #{loan.loan_id}
@@ -294,7 +295,7 @@ export default function PayLoanPage() {
       )}
 
       {step === 'result' && result && (
-        <div className="space-y-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+        <div className="card space-y-5 p-6">
           {result.ok ? (
             <>
               <Alert tone="success">{result.message}</Alert>
@@ -311,13 +312,10 @@ export default function PayLoanPage() {
                 </div>
               </dl>
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <Link to={`/customer/accounts/${result.data.account_number}`} className={LINK_BUTTON}>
+                <Link to={`/customer/accounts/${result.data.account_number}`} className={buttonClass('secondary')}>
                   View account
                 </Link>
-                <Link
-                  to={`/customer/loans/${loanId}`}
-                  className="inline-flex items-center justify-center rounded-lg bg-navy-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-navy-800"
-                >
+                <Link to={`/customer/loans/${loanId}`} className={buttonClass()}>
                   Back to the loan
                 </Link>
               </div>
@@ -327,7 +325,7 @@ export default function PayLoanPage() {
               <Alert>{result.message}</Alert>
               <p className="text-sm text-slate-600">No money was moved.</p>
               <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <Link to={`/customer/loans/${loanId}`} className={LINK_BUTTON}>
+                <Link to={`/customer/loans/${loanId}`} className={buttonClass('secondary')}>
                   Back to the loan
                 </Link>
                 {result.retry && <Button onClick={reset}>Try again</Button>}

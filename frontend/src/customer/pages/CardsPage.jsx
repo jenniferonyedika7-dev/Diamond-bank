@@ -121,7 +121,7 @@ function CardTile({ card, onBlock }) {
   const shown = card.status === 'ACTIVE' ? number : null
 
   return (
-    <li className="flex flex-col rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <li className="card flex flex-col p-5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-medium text-slate-700">{card.card_type.type_name}</span>
         <CardStatusBadge status={card.status} />
@@ -299,7 +299,7 @@ function RequestCardForm({ accounts, cards, onDone }) {
   }
 
   return (
-    <div className="max-w-xl rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <div className="card max-w-xl p-5">
       <h2 className="mb-1 text-lg font-semibold text-navy-900">Request a debit card</h2>
       <p className="mb-4 text-sm text-slate-600">One card per account. Frozen or closed accounts can't have a card.</p>
       {loadError ? (

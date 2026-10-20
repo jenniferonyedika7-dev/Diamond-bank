@@ -87,7 +87,7 @@ export default function ResourcePage({ config }) {
           {/* Cards on small screens */}
           <ul className="space-y-3 md:hidden">
             {items.map((row) => (
-              <li key={row[config.idKey]} className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+              <li key={row[config.idKey]} className="card p-4">
                 <p className="font-medium text-slate-900">{nameOf(row)}</p>
                 <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                   {config.columns.slice(1).map((col) => (
@@ -103,9 +103,9 @@ export default function ResourcePage({ config }) {
           </ul>
 
           {/* Table from md up */}
-          <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-200 md:block">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+          <div className="card hidden overflow-x-auto md:block">
+            <table className="data-table">
+              <thead>
                 <tr>
                   {config.columns.map((col) => (
                     <th key={col.key} scope="col" className={`px-4 py-3 ${col.align === 'right' ? 'text-right' : ''}`}>
@@ -117,9 +117,9 @@ export default function ResourcePage({ config }) {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {items.map((row) => (
-                  <tr key={row[config.idKey]} className="hover:bg-slate-50">
+                  <tr key={row[config.idKey]}>
                     {config.columns.map((col, i) => (
                       <td
                         key={col.key}

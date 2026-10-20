@@ -88,18 +88,18 @@ export default function CustomerDetailPage() {
           <p className="text-sm text-slate-600">No accounts yet.</p>
         ) : (
           <div className="-mx-5 overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table className="data-table">
               <caption className="sr-only">Accounts held by {fullName}</caption>
               <thead>
-                <tr className="border-b border-slate-200 text-left text-slate-500">
-                  <th scope="col" className="px-5 py-2 font-medium">Account number</th>
-                  <th scope="col" className="px-5 py-2 font-medium">Type</th>
-                  <th scope="col" className="px-5 py-2 font-medium">Branch</th>
-                  <th scope="col" className="px-5 py-2 font-medium">Status</th>
-                  <th scope="col" className="px-5 py-2 text-right font-medium">Balance</th>
+                <tr>
+                  <th scope="col" className="px-5 py-2">Account number</th>
+                  <th scope="col" className="px-5 py-2">Type</th>
+                  <th scope="col" className="px-5 py-2">Branch</th>
+                  <th scope="col" className="px-5 py-2">Status</th>
+                  <th scope="col" className="px-5 py-2 text-right">Balance</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 {customer.accounts.map((a) => (
                   <tr key={a.account_id}>
                     <td className="px-5 py-3 font-mono text-slate-900">{a.account_number}</td>
@@ -136,7 +136,7 @@ export default function CustomerDetailPage() {
 
 function Card({ title, children, className = '' }) {
   return (
-    <div className={`rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200 ${className}`}>
+    <div className={`card p-5 ${className}`}>
       <h2 className="mb-4 text-lg font-semibold text-navy-900">{title}</h2>
       {children}
     </div>

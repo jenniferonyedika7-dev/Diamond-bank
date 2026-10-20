@@ -71,7 +71,7 @@ export default function AccessRequestsPage() {
                 <li key={r.access_request_id}>
                   <Link
                     to={`/admin/access-requests/${r.access_request_id}`}
-                    className="block rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200 hover:ring-navy-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600 sm:p-5"
+                    className="card card-interactive block p-4 sm:p-5"
                   >
                     <p className="flex flex-wrap items-center gap-2 font-medium text-slate-900">
                       {r.customer_name}

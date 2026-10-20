@@ -190,7 +190,7 @@ function CashDialog({ type, account, onClose, onDone }) {
             <p className="text-sm text-navy-800">New balance</p>
             <p className="mt-1 text-3xl font-semibold tabular-nums text-navy-900">{formatMoney(result.balanceAfter, account.currency_code)}</p>
           </div>
-          <div className="flex justify-end">
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <Button onClick={close}>Done</Button>
           </div>
         </div>

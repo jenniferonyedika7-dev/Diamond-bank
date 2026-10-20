@@ -323,8 +323,8 @@ export default function CustomerDetailPage() {
 
 function Card({ title, action, children, className = '' }) {
   return (
-    <div className={`rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200 ${className}`}>
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <div className={`card p-5 ${className}`}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-navy-900">{title}</h2>
         {action}
       </div>

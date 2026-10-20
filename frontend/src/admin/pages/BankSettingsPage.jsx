@@ -74,7 +74,7 @@ export default function BankSettingsPage() {
         title={exists ? 'Bank details' : 'Set up your bank'}
         description={exists ? 'The bank this system runs. There is only ever one.' : 'Enter the bank’s details. You can change them later.'}
       />
-      <form onSubmit={handleSubmit} noValidate className="space-y-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+      <form onSubmit={handleSubmit} noValidate className="card space-y-5 p-6">
         <Alert tone="success">{success}</Alert>
         <Alert>{error}</Alert>
         <FormField label="Bank name" maxLength={100} autoComplete="organization" {...field('bank_name')} />
@@ -87,9 +87,11 @@ export default function BankSettingsPage() {
           {...field('swift_code')}
         />
         <FormField label="Established on" type="date" max={todayIso()} {...field('established_date')} />
-        <Button type="submit" loading={submitting} loadingText="Saving…">
-          {exists ? 'Save changes' : 'Save bank details'}
-        </Button>
+        <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end">
+          <Button type="submit" loading={submitting} loadingText="Saving…">
+            {exists ? 'Save changes' : 'Save bank details'}
+          </Button>
+        </div>
       </form>
     </section>
   )

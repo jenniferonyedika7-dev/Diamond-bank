@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router'
 import Alert from '../../components/Alert.jsx'
 import Button from '../../components/Button.jsx'
+import { buttonClass } from '../../components/buttonStyles.js'
 import ConfirmDialog from '../../components/ConfirmDialog.jsx'
 import Loading from '../../components/Loading.jsx'
 import { LoanStatusBadge } from '../../components/StatusBadges.jsx'
@@ -14,8 +15,6 @@ import PaymentHistory from '../../shared/loans/PaymentHistory.jsx'
 import RepaymentSummary from '../../shared/loans/RepaymentSummary.jsx'
 import ScheduleTable from '../../shared/loans/ScheduleTable.jsx'
 
-const LINK_BUTTON =
-  'inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2'
 
 export default function LoanDetailPage() {
   const { loanId } = useParams()
@@ -99,7 +98,7 @@ export default function LoanDetailPage() {
                   {quote.next_instalment && (
                     <Link
                       to={`/customer/loans/${loan.loan_id}/pay?type=INSTALMENT`}
-                      className={`${LINK_BUTTON} bg-navy-900 text-white hover:bg-navy-800 focus-visible:outline-accent-500`}
+                      className={buttonClass()}
                     >
                       Pay next instalment
                     </Link>
@@ -107,11 +106,7 @@ export default function LoanDetailPage() {
                   {quote.payoff && (
                     <Link
                       to={`/customer/loans/${loan.loan_id}/pay?type=EARLY_PAYOFF`}
-                      className={`${LINK_BUTTON} ${
-                        quote.next_instalment
-                          ? 'bg-white text-navy-900 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus-visible:outline-navy-600'
-                          : 'bg-navy-900 text-white hover:bg-navy-800 focus-visible:outline-accent-500'
-                      }`}
+                      className={buttonClass(quote.next_instalment ? 'secondary' : 'primary')}
                     >
                       Pay everything now
                     </Link>

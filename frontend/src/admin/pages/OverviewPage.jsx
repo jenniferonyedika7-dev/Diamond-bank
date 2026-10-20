@@ -5,26 +5,26 @@ import PageHeader from '../../components/PageHeader.jsx'
 import Spinner from '../../components/Spinner.jsx'
 import { api, getErrorMessage } from '../../lib/api.js'
 
-function StatCard({ label, value, detail, to }) {
+function StatCard({ label, value, detail, to, small = false }) {
   const body = (
     <>
       <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-3xl font-semibold tabular-nums text-navy-900">{value}</p>
+      <p className={`mt-1 font-semibold text-navy-900 ${small ? 'break-words text-xl' : 'text-3xl tabular-nums'}`}>{value}</p>
       {detail && <p className="mt-1 text-xs text-slate-500">{detail}</p>}
     </>
   )
-  const box = 'block rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200'
   return to ? (
-    <Link to={to} className={`${box} hover:ring-navy-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600`}>
+    <Link to={to} className="card card-interactive block min-w-0 p-5">
       {body}
     </Link>
   ) : (
-    <div className={box}>{body}</div>
+    <div className="card min-w-0 p-5">{body}</div>
   )
 }
 
 export default function OverviewPage() {
   const [overview, setOverview] = useState(null)
+  const [bankName, setBankName] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -33,6 +33,11 @@ export default function OverviewPage() {
       .get('/api/v1/admin/overview')
       .then(({ data }) => !ignore && setOverview(data.data))
       .catch((err) => !ignore && setError(getErrorMessage(err)))
+    // Only for the Bank details box; if this read fails the box keeps its plain "Set up".
+    api
+      .get('/api/v1/admin/bank')
+      .then(({ data }) => !ignore && setBankName(data.data?.bank_name ?? ''))
+      .catch(() => {})
     return () => {
       ignore = true
     }
@@ -105,9 +110,15 @@ export default function OverviewPage() {
           label="Customers"
           value={customers.total}
           detail={`KYC: ${customers.PENDING} pending · ${customers.VERIFIED} verified · ${customers.REJECTED} rejected`}
+          to="/admin/customers"
         />
         <StatCard label="Accounts" value={overview.accounts} />
-        <StatCard label="Bank details" value={overview.bank_configured ? 'Set up' : 'Missing'} to="/admin/bank" />
+        <StatCard
+          label="Bank details"
+          value={overview.bank_configured ? bankName || 'Set up' : 'Missing'}
+          small={overview.bank_configured && bankName !== ''}
+          to="/admin/bank"
+        />
       </div>
     </section>
   )

@@ -175,7 +175,7 @@ function StaffCard({ user, tab, onAction }) {
   const rejected = user.status === 'BLOCKED' && !user.branch
 
   return (
-    <li className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
+    <li className="card p-4 sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 font-medium text-slate-900">

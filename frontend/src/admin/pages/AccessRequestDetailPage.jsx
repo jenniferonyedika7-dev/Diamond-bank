@@ -187,7 +187,7 @@ export default function AccessRequestDetailPage() {
 
 function Panel({ title, children }) {
   return (
-    <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <div className="card p-5">
       <h2 className="mb-4 text-lg font-semibold text-navy-900">{title}</h2>
       {children}
     </div>

@@ -31,7 +31,7 @@ export default function PaymentHistory({ payments, staff = false }) {
     <>
       <ul className="space-y-2 md:hidden">
         {payments.map((payment) => (
-          <li key={payment.loan_payment_id} className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-slate-200">
+          <li key={payment.loan_payment_id} className="card p-3">
             <div className="flex items-baseline justify-between gap-3">
               <span className="font-medium text-slate-900">{covered(payment)}</span>
               <span className="font-medium tabular-nums text-slate-900">{formatMoney(payment.amount)}</span>
@@ -46,9 +46,9 @@ export default function PaymentHistory({ payments, staff = false }) {
         ))}
       </ul>
 
-      <div className="hidden overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-slate-200 md:block">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
-          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+      <div className="card hidden overflow-x-auto md:block">
+        <table className="data-table">
+          <thead>
             <tr>
               <th scope="col" className="px-4 py-3">Date</th>
               <th scope="col" className="px-4 py-3 text-right">Amount</th>
@@ -57,7 +57,7 @@ export default function PaymentHistory({ payments, staff = false }) {
               <th scope="col" className="px-4 py-3 text-right">Loan balance after</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody>
             {payments.map((payment) => (
               <tr key={payment.loan_payment_id}>
                 <td className="whitespace-nowrap px-4 py-3 text-slate-700">{formatDateTime(payment.payment_date)}</td>

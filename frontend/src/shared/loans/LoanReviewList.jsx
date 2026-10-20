@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import Alert from '../../components/Alert.jsx'
 import Badge from '../../components/Badge.jsx'
+import { buttonClass } from '../../components/buttonStyles.js'
 import EmptyState from '../../components/EmptyState.jsx'
 import FormField from '../../components/FormField.jsx'
 import Loading from '../../components/Loading.jsx'
@@ -98,7 +99,7 @@ export default function LoanReviewList({ area, defaultTab, showBranch = false })
 function LoanRow({ loan, area, showBranch }) {
   const { affordability } = loan
   return (
-    <li className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
+    <li className="card p-4 sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="flex flex-wrap items-center gap-2 font-medium text-slate-900">
@@ -131,7 +132,7 @@ function LoanRow({ loan, area, showBranch }) {
         </div>
         <Link
           to={`/${area}/loans/${loan.loan_id}`}
-          className="inline-flex shrink-0 items-center justify-center rounded-lg bg-white px-4 py-2 text-sm font-semibold text-navy-900 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-navy-600"
+          className={buttonClass('secondary', 'shrink-0')}
         >
           Review<span className="sr-only"> loan #{loan.loan_id} for {loan.customer.name}</span>
         </Link>

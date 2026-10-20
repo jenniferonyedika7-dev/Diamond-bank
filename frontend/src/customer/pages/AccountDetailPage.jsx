@@ -92,7 +92,7 @@ export default function AccountDetailPage() {
       <div>
         <h2 className="mb-3 text-lg font-semibold text-navy-900">Transaction history</h2>
         <form
-          className="mb-4 grid gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:grid-cols-3"
+          className="card mb-4 grid gap-3 p-4 sm:grid-cols-3"
           onSubmit={(e) => e.preventDefault()}
         >
           <FormField id="type" label="Type" value={filters.type} onChange={update}>

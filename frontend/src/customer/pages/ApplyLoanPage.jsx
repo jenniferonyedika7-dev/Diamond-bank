@@ -327,7 +327,7 @@ function ApplyForm({ context }) {
       <form
         onSubmit={step === 4 ? handleSubmit : handleNext}
         noValidate
-        className="space-y-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200"
+        className="card space-y-5 p-6"
       >
         <h2 ref={headingRef} tabIndex={-1} className="text-lg font-semibold text-navy-900 focus:outline-none" aria-live="polite">
           Step {step} of 4: {STEPS[step - 1]}
