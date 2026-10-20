@@ -1,7 +1,7 @@
 # Diamond Bank: Software Requirements Specification
 
-**Prepared by:** Jennifer Onyedika
-**Version:** 1.0
+**Prepared by:** Jennifer Onyedika\
+**Version:** 1.0\
 **Date:** 20 October 2026
 
 ---
