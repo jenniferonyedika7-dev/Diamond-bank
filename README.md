@@ -6,20 +6,44 @@ Built by Jennifer Onyedika.
 
 ## Contents
 
-1. [Features by role](#features-by-role)
-2. [Tech stack](#tech-stack)
-3. [Database](#database)
-4. [Security](#security)
-5. [Business rules](#business-rules)
-6. [Installation](#installation)
-7. [Configuration](#configuration)
-8. [Running the tests](#running-the-tests)
-9. [Demo notes](#demo-notes)
-10. [Future work](#future-work)
+1. [Documentation](#documentation)
+2. [Features by role](#features-by-role)
+3. [Tech stack](#tech-stack)
+4. [Database](#database)
+5. [Security](#security)
+6. [Business rules](#business-rules)
+7. [Installation](#installation)
+8. [Configuration](#configuration)
+9. [Running the tests](#running-the-tests)
+10. [Demo notes](#demo-notes)
+11. [Future work](#future-work)
+
+## Documentation
+
+| Document | What it covers |
+|---|---|
+| [Software Requirements Specification](docs/SRS.md) ([Word version](docs/SRS.docx)) | Purpose, scope, user roles, functional and non-functional requirements, status workflows (with diagrams), business rules and database requirements. |
+| [Entity Relationship Diagram](docs/ERD.md) | The 27 bank tables, their 52 foreign keys and the stored procedures. The [full diagram](docs/erd/full.png) is a single image; per-area diagrams are in `docs/erd/`. |
+| [Customer user guide](docs/user-guide.md) | Step-by-step help for customers: registering, transfers, cards, loans and what to do when locked out. |
+| [Staff and administrator guide](docs/staff-admin-guide.md) | Step-by-step help for branch staff (KYC, accounts, cash, cards, loans, access requests) and administrators (bank setup, people, final loan approval). |
+
+[![Full entity relationship diagram](docs/erd/full.png)](docs/ERD.md)
 
 ## Features by role
 
 There are three roles: customer, staff and admin. Each role has its own area in the web app and its own part of the API.
+
+### Navigation
+
+Every signed-in page has a navy **top bar** with the role's sections. The page you are on is underlined in gold.
+
+- **Customer:** *Overview*, *Accounts*, *Transfer*, *Cards* and *Loans*.
+- **Staff:** *Dashboard*, *Customers*, *Cards*, *Loans* and *Audit log*. A strip under the bar shows the staff member's branch and department.
+- **Admin:** *Overview*, two drop-down menus, then *Loans* and *Audit log*. The drop-downs are **Bank setup** (*Bank settings*, *Branches*, *Account types*, *Card types*, *Loan types*, *Departments*) and **People** (*Customers*, *Staff*, *Access requests*).
+- **Customer search:** staff and admins have a *Search customers* box in the bar, which opens their Customers page with the search filled in. Staff search all customers, not only those at their branch.
+- **User menu:** the user's name and role on the right opens *Profile* (customers only), *Change password* and *Log out*.
+- **Phones and small screens:** the sections, search and user menu fold into a **Menu** button.
+- While a password change is required, the bar offers only *Log out*.
 
 ### Customer
 
@@ -43,7 +67,7 @@ There are three roles: customer, staff and admin. Each role has its own area in 
 
 Staff register on the public staff sign-up page, and an admin must approve them before they can sign in. Each staff member works at one current branch.
 
-- **Dashboard**: a summary for their branch.
+- **Dashboard**: a quick search (an account number opens the account; anything else searches customers) and KYC counts (*Awaiting KYC*, *Verified*, *Rejected*) across all customers. Each count opens that tab of the Customers page.
 - **Customers**: search and view customers at every branch. At their own branch they can also:
   - edit a customer's details;
   - verify or reject KYC;
@@ -62,21 +86,19 @@ Staff register on the public staff sign-up page, and an admin must approve them 
 
 ### Admin
 
-- **Overview**: bank-wide counts (for example users by status and customers by KYC status).
-- **Bank settings**: the bank's name, SWIFT code and date established.
-- **Branches**: create, edit and delete.
-- **Account types**: create, edit and delete. Each type has a minimum balance and a daily transfer limit.
-- **Card types**: create, edit and delete debit card types, each with a daily limit.
-- **Loan types**: create, edit and delete loan types, each with an annual interest rate.
-- **Departments**: create, edit and delete.
-- **Customers**: a read-only view of every customer, plus changing a customer's username.
+- **Overview**: clickable boxes for pending staff, active staff (with the number blocked), pending access requests, branches, customers by KYC status, accounts, and the bank's details. Banners at the top flag a bank that isn't set up yet, access requests awaiting a decision and staff awaiting approval.
+- **Bank setup** menu:
+  - **Bank settings**: the bank's name, SWIFT code and date established.
+  - **Branches**: create, edit and delete.
+  - **Account types**: create, edit and delete. Each type has a minimum balance and a daily transfer limit.
+  - **Card types**: create, edit and delete debit card types, each with a daily limit.
+  - **Loan types**: create, edit and delete loan types, each with an annual interest rate.
+  - **Departments**: create, edit and delete.
+- **People** menu:
+  - **Customers**: a read-only view of every customer, plus changing a customer's username.
+  - **Staff**: approve a registration (assigning a branch and optionally a department) or reject it; block and unblock staff; change a staff member's username; restore access for a staff member locked out by wrong passwords.
+  - **Access requests**: approve or reject the customer access requests raised by staff.
 - **Loans**: the final (second) approval or rejection of loans from every branch. Approving pays the loan into the customer's account.
-- **Staff**:
-  - Approve a registration, assigning a branch and optionally a department, or reject it.
-  - Block and unblock staff.
-  - Change a staff member's username.
-  - Restore access for a staff member locked out by wrong passwords.
-- **Access requests**: approve or reject the customer access requests raised by staff.
 - **Audit log**: every row.
 
 ## Tech stack
@@ -133,7 +155,7 @@ The application database is `bank_db`. The tests use a separate database, `bank_
 | `access_request` | Requests to reopen a customer login locked by wrong passwords. |
 | `demo_sms_outbox` | Simulated text messages (see [Demo notes](#demo-notes)). |
 
-Laravel also creates its own `sessions`, `cache`, `cache_locks`, `jobs`, `job_batches` and `failed_jobs` tables.
+That is 27 bank tables. Laravel adds seven of its own, which no bank table references: `sessions`, `cache`, `cache_locks`, `jobs`, `job_batches`, `failed_jobs` and `migrations` (34 tables in all).
 
 ### Stored procedures and functions
 
@@ -307,9 +329,9 @@ Each procedure runs its own transaction and refuses bad input with a clear error
 
 8. **Sign in as the admin** with `ADMIN_USERNAME` and `ADMIN_PASSWORD`. You must change the password before anything else.
 
-9. **Set up the bank.** In the admin area, fill in *Bank settings*, then add branches, account types, card types and loan types. After that:
-   - customers can register on the *Open an account* page;
-   - staff can register on the staff sign-up page, and then wait for an admin to approve them.
+9. **Set up the bank.** In the admin top bar, open **Bank setup** > *Bank settings* and fill it in. Then, from the same menu, add *Branches*, *Account types*, *Card types* and *Loan types* (and optionally *Departments*). After that:
+   - customers can register through the *Register online* link on the sign-in page, which opens the *Open an account* page;
+   - staff can register through the *Register as staff* link on the sign-in page, and then wait for an admin to approve them under **People** > *Staff*.
 
 ## Configuration
 
@@ -350,7 +372,7 @@ php artisan test
 
 The tests run against **`bank_db_testing` only**: `phpunit.xml` sets `DB_DATABASE=bank_db_testing`, and the tests prepare that database themselves (migrating it, then emptying and re-seeding it before each test). They never touch `bank_db`. Create `bank_db_testing` first (installation step 5).
 
-Current result: **612 tests, 13,957 assertions, all passing.** They cover authentication, every role's features, the stored procedures, concurrency (row locking), security (lockouts, branch scoping, idle logout, throttles) and the migrations.
+Current result (run on 21 October 2026): **612 tests, 13,957 assertions, all passing.** They cover authentication, every role's features, the stored procedures, concurrency (row locking), security (lockouts, branch scoping, idle logout, throttles) and the migrations.
 
 ### Frontend
 
@@ -361,7 +383,7 @@ npm run lint     # oxlint
 npm run build    # production build
 ```
 
-Current result: **14 tests, all passing.** They cover money formatting, phone validation, form errors and the cross-tab idle logout. Lint and build also pass.
+Current result (run on 21 October 2026): **14 tests, all passing.** They cover money formatting, phone validation, form errors and the cross-tab idle logout. Lint passes with no warnings. The build succeeds, with Vite's advisory that the main JavaScript chunk is larger than 500 kB.
 
 ## Demo notes
 
